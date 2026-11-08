@@ -12,9 +12,18 @@ if [[ -z "$DEST" ]]; then
   fi
 fi
 
+MISE_RUBY_ROOT="${MISE_RUBY_ROOT:-/home/ubuntu/.local/share/mise/installs/ruby}"
+
 SRC="${RUBY_SRC:-}"
-if [[ -z "$SRC" ]]; then
-  SRC="$(ls -d /home/ubuntu/.local/share/mise/installs/ruby/*/ 2>/dev/null | sort -V | tail -1 || true)"
+if [[ -z "$SRC" && -f .ruby-version ]]; then
+  read -r WANT < .ruby-version
+  WANT="${WANT#ruby-}"
+  if [[ -n "$WANT" && -x "${MISE_RUBY_ROOT}/${WANT}/bin/ruby" ]]; then
+    SRC="${MISE_RUBY_ROOT}/${WANT}"
+  fi
+fi
+if [[ -z "$SRC" || ! -x "${SRC}/bin/ruby" ]]; then
+  SRC="$(ls -d "${MISE_RUBY_ROOT}"/*/ 2>/dev/null | sort -V | tail -1 || true)"
   SRC="${SRC%/}"
 fi
 if [[ -z "$SRC" || ! -x "${SRC}/bin/ruby" ]]; then
