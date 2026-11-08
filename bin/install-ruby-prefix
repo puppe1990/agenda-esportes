@@ -35,6 +35,8 @@ if [[ ! -x "$SRC/bin/ruby" ]]; then
   exit 1
 fi
 
+SRC="$(cd "$SRC" && pwd -P)"
+
 if [[ "$SRC" == "$DEST" ]]; then
   printf 'ruby prefix already at %s\n' "$DEST"
   exit 0

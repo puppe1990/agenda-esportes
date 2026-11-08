@@ -38,6 +38,30 @@ class BootScriptsTest < Minitest::Test
     assert_equal File.read(ruby_bin), File.read(copied)
   end
 
+  def test_install_ruby_prefix_copies_through_a_symlink_src
+    real = Dir.mktmpdir("agenda-ruby-real-")
+    FileUtils.mkdir_p(File.join(real, "bin"))
+    ruby_bin = File.join(real, "bin", "ruby")
+    File.write(ruby_bin, "#!/bin/sh\necho copied\n")
+    FileUtils.chmod(0o755, ruby_bin)
+
+    src_link = File.join(Dir.mktmpdir("agenda-ruby-link-"), "3.3.6")
+    File.symlink(real, src_link)
+    dest = File.join(Dir.mktmpdir("agenda-ruby-dest-"), Faker::Alphanumeric.alpha(number: 8))
+
+    stdout, stderr, status = Open3.capture3(
+      { "RUBY_SRC" => src_link, "RUBY_PREFIX" => dest },
+      "bash", File.join(ROOT, "bin/install-ruby-prefix")
+    )
+
+    assert status.success?, "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
+    refute File.symlink?(dest)
+    copied = File.join(dest, "bin", "ruby")
+    assert File.file?(copied)
+    assert File.executable?(copied)
+    assert_equal File.read(ruby_bin), File.read(copied)
+  end
+
   def test_install_ruby_prefix_refuses_a_system_root
     dest = File.join(Dir.mktmpdir("agenda-ruby-dest-"), Faker::Alphanumeric.alpha(number: 8))
 
