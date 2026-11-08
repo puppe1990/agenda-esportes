@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Agenda de esportes — 8 a 15 de novembro</title>
-<meta name="description" content="Futebol, NFL, NBA e automobilismo. Horário de Brasília, onde assistir, e a agendinha para guardar o esporte do dia.">
+<title>Agenda de esportes</title>
+<meta name="description" content="Futebol, NFL, NBA e automobilismo. Clica no jogo e grava na agenda.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#10160f">
-<meta property="og:title" content="Agenda de esportes — domingo lotado">
-<meta property="og:description" content="Vasco às 17h. Interlagos às 14h. NBA à noite. Horário de Brasília e onde assistir.">
-<meta property="og:type" content="article">
+<meta property="og:title" content="Agenda de esportes">
+<meta property="og:description" content="Futebol, NFL, NBA e automobilismo. Clica no jogo e grava na agenda.">
+<meta property="og:type" content="website">
 <meta property="og:url" content="https://agenda-esportes.sites.gestaobem.com">
 <meta property="og:locale" content="pt_BR">
 <link rel="preload" href="/fonts/instrument-serif-400.woff2" as="font" type="font/woff2" crossorigin>
@@ -40,25 +40,5 @@
 </nav>
 
 <%= yield %>
-
-<footer class="foot" data-theme="ink">
-  <div class="wrap">
-    <p class="kicker" style="margin:0">/// 05 · fonte</p>
-    <p>Horários de Brasília, conferidos em 8 de novembro de 2026 (ge, ESPN, Sporting News, Formula 1, CBF, Conmebol). Transmissão muda de uma semana para outra — confira a grade do app no dia. A agendinha grava o jogo que você coloca no SQLite desta instância.</p>
-  </div>
-</footer>
-
-<script>
-(function () {
-  var now = Date.now();
-  document.querySelectorAll("[data-start]").forEach(function (el) {
-    var s = Date.parse(el.getAttribute("data-start"));
-    var e = Date.parse(el.getAttribute("data-end") || "") || s + 2 * 60 * 60 * 1000;
-    if (!s) return;
-    if (now >= s && now < e) el.classList.add("is-live");
-    else if (now >= e) el.classList.add("is-done");
-  });
-})();
-</script>
 </body>
 </html>

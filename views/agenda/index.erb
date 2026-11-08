@@ -1,14 +1,9 @@
 <main id="conteudo">
-<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto">
+<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto app-page">
   <div class="wrap">
-    <p class="kicker">/// minha agenda</p>
-    <h1>O que você colocou.</h1>
-    <p class="lead">Tudo que está no SQLite. Clica pra ver, editar ou apagar. A grade da TV continua embaixo da agendinha.</p>
-    <p class="note"><a href="/#agendinha">colocar outro jogo</a></p>
-
     <div class="mine mine-full">
       <% if items.empty? %>
-        <p class="note">Nada na agenda. Volta e clica num jogo.</p>
+        <p class="note">Nada na agenda. <a href="/">Escolher um jogo</a></p>
       <% else %>
         <% items.each do |item| %>
           <article class="ev" data-s="<%= sport_filter(item.sport) %>">

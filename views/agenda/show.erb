@@ -1,9 +1,8 @@
 <main id="conteudo">
-<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto">
+<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto app-page">
   <div class="wrap">
-    <p class="kicker">/// <%= sport_name(item.sport) %> · <%= item.starts_on.strftime("%d/%m") %></p>
+    <p class="kicker"><%= sport_name(item.sport) %> · <%= item.starts_on.strftime("%d/%m") %></p>
     <h1><%= item.title %></h1>
-    <p class="lead"><%= sport_name(item.sport) %> no dia <%= item.starts_on.strftime("%d/%m/%Y") %>.</p>
     <%= item_actions(item) %>
     <p class="note">
       <a href="/?dia=<%= item.starts_on.iso8601 %>">ver no dia</a>

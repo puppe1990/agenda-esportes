@@ -1,10 +1,6 @@
 <main id="conteudo">
-<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto">
+<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto app-page">
   <div class="wrap">
-    <p class="kicker">/// editar</p>
-    <h1>Muda o que entra na agenda.</h1>
-    <p class="lead">Troca o esporte, o dia ou o título. Vazio no título volta o nome do catálogo.</p>
-
     <form method="post" action="/agenda/<%= item.id %>" class="edit-form">
       <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
       <input type="hidden" name="_method" value="patch">

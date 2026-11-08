@@ -146,11 +146,38 @@ class AppTest < Minitest::Test
     assert_empty AgendaEsportes::App.store.all
   end
 
-  def test_home_shows_interlagos_on_sunday
-    get "/"
+  def test_home_is_the_system_without_editorial_copy
+    get "/?dia=2026-11-08"
 
-    assert_includes last_response.body, "Interlagos"
+    assert_includes last_response.body, 'class="cal"'
+    assert_includes last_response.body, 'class="game-card"'
+    assert_includes last_response.body, "Vasco x Palmeiras"
     assert_includes last_response.body, "Grande Prêmio de São Paulo"
+    refute_includes last_response.body, "Domingo lotado"
+    refute_includes last_response.body, "A grade que sobrou"
+    refute_includes last_response.body, "Três esportes, um relógio"
+    refute_includes last_response.body, "Las Vegas, finais no continente"
+    refute_includes last_response.body, "Interlagos"
+    refute_includes last_response.body, "Clica no jogo. Entra no dia."
+    refute_includes last_response.body, "coloca no dia"
+    refute_includes last_response.body, "/// 05 · fonte"
+  end
+
+  def test_agenda_index_is_the_list_without_editorial_copy
+    title = Faker::Team.name
+    AgendaEsportes::App.store.add(
+      sport: "nba",
+      starts_at: Date.new(2026, 11, 12),
+      title: title
+    )
+
+    get "/agenda"
+
+    assert last_response.ok?
+    assert_includes last_response.body, title
+    refute_includes last_response.body, "O que você colocou."
+    refute_includes last_response.body, "SQLite"
+    refute_includes last_response.body, "grade da TV"
   end
 
   def test_agenda_index_lists_saved_items
