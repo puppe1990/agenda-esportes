@@ -1,6 +1,6 @@
 # Agenda de esportes
 
-Grade da semana (futebol, NFL, NBA e automobilismo) com uma agendinha: clica no dia, clica no card do esporte, grava no SQLite.
+Grade da semana (futebol, NFL, NBA e automobilismo) com uma agendinha: clica no dia, clica no card do esporte, grava no SQLite. A agenda pessoal tem CRUD em `/agenda`.
 
 Host: https://agenda-esportes.sites.gestaobem.com  
 Repo: [puppe1990/agenda-esportes](https://github.com/puppe1990/agenda-esportes)

@@ -15,7 +15,7 @@
 
 <section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto" id="agendinha">
   <div class="wrap">
-    <p class="kicker">/// 00 · agendinha</p>
+    <p class="kicker">/// 00 · agendinha · <a href="/agenda">minha agenda</a></p>
     <h2>Clica no esporte. Entra no dia.</h2>
     <p class="lead">O calendário escolhe o dia. O card escreve. Quatro esportes, um clique, grava no SQLite. A grade de baixo continua a da TV — isto aqui é o que você resolveu assistir.</p>
 
@@ -59,15 +59,16 @@
             <p class="note">Nada neste dia. Clica num esporte.</p>
           <% else %>
             <% on_day.each do |item| %>
-              <article class="ev" data-s="<%= item.sport %>">
+              <article class="ev" data-s="<%= sport_filter(item.sport) %>">
                 <time datetime="<%= item.starts_on.iso8601 %>"><%= item.starts_on.strftime("%d/%m") %></time>
                 <div>
                   <% if item.title == sport_name(item.sport) %>
-                    <h3><%= item.title %></h3>
+                    <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
                   <% else %>
                     <p class="comp"><%= sport_name(item.sport) %></p>
-                    <h3><%= item.title %></h3>
+                    <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
                   <% end %>
+                  <%= item_actions(item) %>
                 </div>
               </article>
             <% end %>

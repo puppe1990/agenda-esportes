@@ -2,6 +2,7 @@
 
 require "bundler/setup"
 require "sinatra/base"
+require "rack/method_override"
 require "rack/protection"
 require "date"
 require "fileutils"
@@ -20,7 +21,14 @@ module AgendaEsportes
     set :views, File.join(root, "views")
     set :public_folder, File.join(root, "public")
     set :sessions, secret: ENV.fetch("SESSION_SECRET") { "agenda-esportes-dev-secret-change-me-in-production-64-bytes-min!" }
+    set :erb, escape_html: true
+    use Rack::MethodOverride
     use Rack::Protection::AuthenticityToken
+
+    FILTER_SLUG = {
+      "futebol" => "fut",
+      "automobilismo" => "auto"
+    }.freeze
 
     class << self
       attr_writer :store
@@ -61,6 +69,28 @@ module AgendaEsportes
       rescue SportsCatalog::UnknownSport
         slug.to_s
       end
+
+      def sport_filter(slug)
+        FILTER_SLUG.fetch(slug, slug)
+      end
+
+      def find_item!
+        item = store.find(params[:id])
+        return item if item
+
+        @not_found_message = "Esse item não está na agenda."
+        halt 404
+      end
+
+      def parse_day(raw)
+        Date.iso8601(raw.to_s)
+      rescue ArgumentError, TypeError
+        halt 400, "dia inválido"
+      end
+
+      def item_actions(item)
+        erb :_item_actions, locals: { item: item }, layout: false
+      end
     end
 
     get "/" do
@@ -75,14 +105,43 @@ module AgendaEsportes
       }
     end
 
+    get "/agenda" do
+      erb :"agenda/index", locals: { items: store.all }
+    end
+
+    get "/agenda/:id/edit" do
+      erb :"agenda/edit", locals: { item: find_item!, sports: SportsCatalog::ALL }
+    end
+
+    get "/agenda/:id" do
+      erb :"agenda/show", locals: { item: find_item! }
+    end
+
     post "/agenda" do
-      day = Date.iso8601(params[:day].to_s)
+      day = parse_day(params[:day])
       store.add(sport: params[:sport], starts_at: day, title: params[:title])
       redirect "/?dia=#{day.iso8601}", 302
     rescue SportsCatalog::UnknownSport
       halt 422, "esporte desconhecido"
-    rescue ArgumentError
-      halt 400, "dia inválido"
+    end
+
+    patch "/agenda/:id" do
+      item = find_item!
+      day = parse_day(params[:day])
+      store.update(item.id, sport: params[:sport], starts_at: day, title: params[:title])
+      redirect "/agenda/#{item.id}", 302
+    rescue SportsCatalog::UnknownSport
+      halt 422, "esporte desconhecido"
+    end
+
+    delete "/agenda/:id" do
+      item = find_item!
+      store.delete(item.id)
+      redirect "/agenda", 302
+    end
+
+    not_found do
+      erb :not_found, locals: { message: @not_found_message || "Essa página não existe." }
     end
   end
 end

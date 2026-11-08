@@ -1,0 +1,31 @@
+<main id="conteudo">
+<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto">
+  <div class="wrap">
+    <p class="kicker">/// minha agenda</p>
+    <h1>O que você colocou.</h1>
+    <p class="lead">Tudo que está no SQLite. Clica pra ver, editar ou apagar. A grade da TV continua embaixo da agendinha.</p>
+    <p class="note"><a href="/#agendinha">colocar outro esporte</a></p>
+
+    <div class="mine mine-full">
+      <% if items.empty? %>
+        <p class="note">Nada na agenda. Volta e clica num esporte.</p>
+      <% else %>
+        <% items.each do |item| %>
+          <article class="ev" data-s="<%= sport_filter(item.sport) %>">
+            <time datetime="<%= item.starts_on.iso8601 %>"><%= item.starts_on.strftime("%d/%m") %></time>
+            <div>
+              <% if item.title == sport_name(item.sport) %>
+                <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
+              <% else %>
+                <p class="comp"><%= sport_name(item.sport) %></p>
+                <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
+              <% end %>
+              <%= item_actions(item) %>
+            </div>
+          </article>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>
+</main>

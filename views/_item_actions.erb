@@ -1,0 +1,9 @@
+<nav class="item-actions" aria-label="Ações">
+  <a href="/agenda/<%= item.id %>">ver</a>
+  <a href="/agenda/<%= item.id %>/edit">editar</a>
+  <form method="post" action="/agenda/<%= item.id %>">
+    <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
+    <input type="hidden" name="_method" value="delete">
+    <button type="submit">apagar</button>
+  </form>
+</nav>

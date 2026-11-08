@@ -100,6 +100,140 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, "Grande Prêmio de São Paulo"
   end
 
+  def test_agenda_index_lists_saved_items
+    title = Faker::Team.name
+    AgendaEsportes::App.store.add(
+      sport: "nba",
+      starts_at: Date.new(2026, 11, 12),
+      title: title
+    )
+
+    get "/agenda"
+
+    assert last_response.ok?
+    assert_includes last_response.body, title
+    assert_includes last_response.body, "NBA"
+    assert_includes last_response.body, "/agenda/"
+  end
+
+  def test_agenda_show_renders_the_item
+    title = Faker::Vehicle.make_and_model
+    item = AgendaEsportes::App.store.add(
+      sport: "automobilismo",
+      starts_at: Date.new(2026, 11, 21),
+      title: title
+    )
+
+    get "/agenda/#{item.id}"
+
+    assert last_response.ok?
+    assert_includes last_response.body, title
+    assert_includes last_response.body, "Automobilismo"
+    assert_includes last_response.body, "/agenda/#{item.id}/edit"
+  end
+
+  def test_agenda_show_unknown_is_404
+    get "/agenda/9999"
+
+    assert_equal 404, last_response.status
+    assert_match(/não encontrado/i, last_response.body)
+    assert_includes last_response.body, "Esse item não está na agenda."
+  end
+
+  def test_agenda_edit_renders_the_form
+    item = AgendaEsportes::App.store.add(
+      sport: "futebol",
+      starts_at: Date.new(2026, 11, 8),
+      title: Faker::Sports::Football.team
+    )
+
+    get "/agenda/#{item.id}/edit"
+
+    assert last_response.ok?
+    assert_includes last_response.body, 'name="sport"'
+    assert_includes last_response.body, 'value="automobilismo"'
+    assert_includes last_response.body, 'name="day"'
+    assert_includes last_response.body, 'name="title"'
+    refute_includes last_response.body, "<select"
+    refute_includes last_response.body, 'value="corrida"'
+  end
+
+  def test_patch_updates_the_item
+    item = AgendaEsportes::App.store.add(
+      sport: "nfl",
+      starts_at: Date.new(2026, 11, 9),
+      title: Faker::Team.name
+    )
+    title = Faker::Team.name
+
+    patch "/agenda/#{item.id}", {
+      sport: "nba",
+      day: "2026-11-20",
+      title: title,
+      authenticity_token: csrf_token
+    }
+
+    assert_equal 302, last_response.status
+    follow_redirect!
+
+    stored = AgendaEsportes::App.store.find(item.id)
+    assert_equal "nba", stored.sport
+    assert_equal title, stored.title
+    assert_equal Date.new(2026, 11, 20), stored.starts_on
+    assert_includes last_response.body, title
+  end
+
+  def test_delete_removes_the_item
+    item = AgendaEsportes::App.store.add(
+      sport: "nba",
+      starts_at: Date.new(2026, 11, 10),
+      title: Faker::Team.name
+    )
+
+    delete "/agenda/#{item.id}", { authenticity_token: csrf_token }
+
+    assert_equal 302, last_response.status
+    assert_nil AgendaEsportes::App.store.find(item.id)
+  end
+
+  def test_patch_corrida_is_rejected
+    item = AgendaEsportes::App.store.add(
+      sport: "nba",
+      starts_at: Date.new(2026, 11, 10),
+      title: Faker::Team.name
+    )
+
+    patch "/agenda/#{item.id}", {
+      sport: "corrida",
+      day: "2026-11-10",
+      title: Faker::Lorem.word,
+      authenticity_token: csrf_token
+    }
+
+    assert_equal 422, last_response.status
+    assert_equal "nba", AgendaEsportes::App.store.find(item.id).sport
+  end
+
+  def test_delete_unknown_is_404
+    delete "/agenda/9999", { authenticity_token: csrf_token }
+
+    assert_equal 404, last_response.status
+  end
+
+  def test_home_item_links_to_show_edit_and_delete
+    item = AgendaEsportes::App.store.add(
+      sport: "nfl",
+      starts_at: Date.new(2026, 11, 8),
+      title: Faker::Team.name
+    )
+
+    get "/?dia=2026-11-08"
+
+    assert_includes last_response.body, "/agenda/#{item.id}"
+    assert_includes last_response.body, "/agenda/#{item.id}/edit"
+    assert_includes last_response.body, 'value="delete"'
+  end
+
   def csrf_token
     get "/"
     last_response.body[/name="authenticity_token"\s+value="([^"]+)"/, 1] ||

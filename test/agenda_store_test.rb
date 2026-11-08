@@ -88,4 +88,67 @@ class AgendaStoreTest < Minitest::Test
 
     assert_empty @store.all
   end
+
+  def test_update_changes_sport_title_and_day
+    item = @store.add(
+      sport: "futebol",
+      starts_at: Date.new(2026, 11, 8),
+      title: Faker::Sports::Football.team
+    )
+    title = Faker::Team.name
+
+    updated = @store.update(
+      item.id,
+      sport: "nba",
+      starts_at: Date.new(2026, 11, 20),
+      title: title
+    )
+
+    assert_equal item.id, updated.id
+    assert_equal "nba", updated.sport
+    assert_equal title, updated.title
+    assert_equal Date.new(2026, 11, 20), updated.starts_on
+    assert_equal updated, @store.find(item.id)
+  end
+
+  def test_update_empty_title_uses_the_catalog_name
+    item = @store.add(sport: "nfl", starts_at: Date.new(2026, 11, 9), title: Faker::Team.name)
+
+    updated = @store.update(item.id, sport: "automobilismo", starts_at: item.starts_on, title: "  ")
+
+    assert_equal "Automobilismo", updated.title
+    assert_equal "automobilismo", updated.sport
+  end
+
+  def test_update_refuses_corrida
+    item = @store.add(sport: "nba", starts_at: Date.new(2026, 11, 10), title: Faker::Team.name)
+
+    error = assert_raises(SportsCatalog::UnknownSport) do
+      @store.update(item.id, sport: "corrida", starts_at: item.starts_on, title: Faker::Lorem.word)
+    end
+
+    assert_match(/corrida/, error.message)
+    assert_equal "nba", @store.find(item.id).sport
+  end
+
+  def test_update_missing_raises_not_found
+    error = assert_raises(AgendaStore::NotFound) do
+      @store.update(9_999, sport: "nba", starts_at: Date.new(2026, 11, 10), title: Faker::Team.name)
+    end
+
+    assert_match(/9999/, error.message)
+  end
+
+  def test_delete_missing_raises_not_found
+    error = assert_raises(AgendaStore::NotFound) do
+      @store.delete(4_321)
+    end
+
+    assert_match(/4321/, error.message)
+  end
+
+  def test_find_unknown_id_returns_nil
+    assert_nil @store.find(123)
+    assert_nil @store.find("abc")
+  end
 end

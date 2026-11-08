@@ -1,0 +1,39 @@
+<main id="conteudo">
+<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto">
+  <div class="wrap">
+    <p class="kicker">/// editar</p>
+    <h1>Muda o que entra na agenda.</h1>
+    <p class="lead">Troca o esporte, o dia ou o título. Vazio no título volta o nome do catálogo.</p>
+
+    <form method="post" action="/agenda/<%= item.id %>" class="edit-form">
+      <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
+      <input type="hidden" name="_method" value="patch">
+
+      <label class="edit-field">
+        <span>Dia</span>
+        <input type="date" name="day" value="<%= item.starts_on.iso8601 %>" required>
+      </label>
+
+      <div class="sport-pick" role="radiogroup" aria-label="Esporte">
+        <% sports.each do |sport| %>
+          <label class="sport-pick-card">
+            <input class="filtro" type="radio" name="sport" value="<%= sport.slug %>" <%= "checked" if sport.slug == item.sport %>>
+            <span class="sport-pick-face">
+              <strong><%= sport.name %></strong>
+            </span>
+          </label>
+        <% end %>
+      </div>
+
+      <label class="edit-field">
+        <span>Título</span>
+        <input type="text" name="title" value="<%= item.title %>" autocomplete="off">
+      </label>
+
+      <button type="submit">salvar</button>
+    </form>
+
+    <p class="note"><a href="/agenda/<%= item.id %>">cancelar</a></p>
+  </div>
+</section>
+</main>

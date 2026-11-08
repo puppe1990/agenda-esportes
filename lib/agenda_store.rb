@@ -6,6 +6,8 @@ require "fileutils"
 require_relative "sports_catalog"
 
 class AgendaStore
+  class NotFound < StandardError; end
+
   Item = Struct.new(:id, :sport, :title, :starts_on, keyword_init: true)
 
   def initialize(path)
@@ -18,8 +20,7 @@ class AgendaStore
 
   def add(sport:, starts_at:, title: nil)
     catalog = SportsCatalog.find!(sport)
-    cleaned = title.to_s.strip
-    cleaned = catalog.name if cleaned.empty?
+    cleaned = blank_to_catalog_name(title, catalog)
     day = coerce_date(starts_at)
 
     @db.execute(
@@ -51,12 +52,31 @@ class AgendaStore
     ).map { |row| Date.iso8601(row["starts_on"]) }
   end
 
+  def update(id, sport:, starts_at:, title: nil)
+    current = require_item(id)
+    catalog = SportsCatalog.find!(sport)
+    cleaned = blank_to_catalog_name(title, catalog)
+    day = coerce_date(starts_at)
+
+    @db.execute(
+      "UPDATE agenda_items SET sport = ?, title = ?, starts_on = ? WHERE id = ?",
+      [catalog.slug, cleaned, day.iso8601, current.id]
+    )
+
+    find(current.id)
+  end
+
   def delete(id)
-    @db.execute("DELETE FROM agenda_items WHERE id = ?", [Integer(id)])
+    current = require_item(id)
+    @db.execute("DELETE FROM agenda_items WHERE id = ?", [current.id])
+    current
   end
 
   def find(id)
-    row = @db.get_first_row("SELECT * FROM agenda_items WHERE id = ?", [Integer(id)])
+    key = Integer(id, exception: false)
+    return nil unless key
+
+    row = @db.get_first_row("SELECT * FROM agenda_items WHERE id = ?", [key])
     hydrate(row) if row
   end
 
@@ -87,5 +107,17 @@ class AgendaStore
     return value.to_date if value.respond_to?(:to_date)
 
     Date.iso8601(value.to_s)
+  end
+
+  def blank_to_catalog_name(title, catalog)
+    cleaned = title.to_s.strip
+    cleaned.empty? ? catalog.name : cleaned
+  end
+
+  def require_item(id)
+    item = find(id)
+    return item if item
+
+    raise NotFound, "item não encontrado: #{id.inspect}"
   end
 end
