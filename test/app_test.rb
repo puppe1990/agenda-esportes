@@ -29,15 +29,29 @@ class AppTest < Minitest::Test
     refute_match(/>corrida</i, last_response.body)
   end
 
-  def test_home_renders_sport_cards_that_post_straight_into_the_agenda
-    get "/"
+  def test_home_renders_game_cards_that_post_the_match_into_the_agenda
+    get "/?dia=2026-11-08"
 
     assert_includes last_response.body, "agendinha"
-    assert_includes last_response.body, 'class="sport-card"'
-    assert_includes last_response.body, 'value="automobilismo"'
+    assert_includes last_response.body, 'class="game-card"'
+    assert_includes last_response.body, "Vasco x Palmeiras"
+    assert_includes last_response.body, 'name="title"'
+    assert_includes last_response.body, 'value="Vasco x Palmeiras"'
     assert_includes last_response.body, 'value="futebol"'
     refute_includes last_response.body, "<select"
     refute_includes last_response.body, "Colocar na agenda"
+    refute_includes last_response.body, 'value="corrida"'
+    refute_includes last_response.body, 'class="sport-card"'
+  end
+
+  def test_home_renders_sport_cards_when_the_day_has_no_tv_games
+    get "/?dia=2026-11-11"
+
+    assert_includes last_response.body, 'class="sport-card"'
+    assert_includes last_response.body, 'value="automobilismo"'
+    assert_includes last_response.body, 'value="futebol"'
+    refute_includes last_response.body, 'class="game-card"'
+    refute_includes last_response.body, "<select"
     refute_includes last_response.body, 'value="corrida"'
     assert_equal 4, last_response.body.scan(/class="sport-card"/).size
   end
@@ -62,6 +76,45 @@ class AppTest < Minitest::Test
     assert_equal 1, stored.size
     assert_equal "automobilismo", stored.first.sport
     assert_equal title, stored.first.title
+  end
+
+  def test_post_game_stores_the_match_title_and_lists_sport_plus_game
+    post "/agenda", {
+      sport: "futebol",
+      day: "2026-11-08",
+      title: "Vasco x Palmeiras",
+      authenticity_token: csrf_token
+    }
+
+    assert_equal 302, last_response.status
+    follow_redirect!
+
+    stored = AgendaEsportes::App.store.items_on(Date.new(2026, 11, 8))
+    assert_equal 1, stored.size
+    assert_equal "futebol", stored.first.sport
+    assert_equal "Vasco x Palmeiras", stored.first.title
+    assert_includes last_response.body, "Vasco x Palmeiras"
+    assert_includes last_response.body, "Futebol"
+    refute_match(
+      %r{<h3><a href="/agenda/#{stored.first.id}">Futebol</a></h3>},
+      last_response.body
+    )
+  end
+
+  def test_saved_item_always_shows_sport_and_match
+    title = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    item = AgendaEsportes::App.store.add(
+      sport: "futebol",
+      starts_at: Date.new(2026, 11, 8),
+      title: title
+    )
+
+    get "/?dia=2026-11-08"
+
+    assert_includes last_response.body, "Futebol"
+    assert_includes last_response.body, title
+    assert_includes last_response.body, "<p class=\"comp\">Futebol</p>"
+    assert_includes last_response.body, "/agenda/#{item.id}"
   end
 
   def test_post_without_title_uses_the_sport_name

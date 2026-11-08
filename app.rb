@@ -9,6 +9,7 @@ require "fileutils"
 require_relative "lib/sports_catalog"
 require_relative "lib/agenda_store"
 require_relative "lib/month_grid"
+require_relative "lib/tv_grid"
 
 module AgendaEsportes
   class App < Sinatra::Base
@@ -100,6 +101,7 @@ module AgendaEsportes
         day: day,
         items: store.all,
         on_day: store.items_on(day),
+        games: TvGrid.on(day),
         grid: MonthGrid.new(year: day.year, month: day.month, marked: marked),
         sports: SportsCatalog::ALL
       }

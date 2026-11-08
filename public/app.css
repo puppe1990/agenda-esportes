@@ -114,7 +114,11 @@ body:has(#f-auto:checked) label[for=f-auto]{
 body:has(#f-fut:checked) .ev:not([data-s=fut]),
 body:has(#f-nfl:checked) .ev:not([data-s=nfl]),
 body:has(#f-nba:checked) .ev:not([data-s=nba]),
-body:has(#f-auto:checked) .ev:not([data-s=auto]){display:none}
+body:has(#f-auto:checked) .ev:not([data-s=auto]),
+body:has(#f-fut:checked) .game-card:not([data-s=fut]),
+body:has(#f-nfl:checked) .game-card:not([data-s=nfl]),
+body:has(#f-nba:checked) .game-card:not([data-s=nba]),
+body:has(#f-auto:checked) .game-card:not([data-s=auto]){display:none}
 body:has(#f-fut:checked) .blk:not(.blk-fut),
 body:has(#f-nfl:checked) .blk:not(.blk-nfl),
 body:has(#f-nba:checked) .blk:not(.blk-nba),
@@ -286,7 +290,7 @@ h2{font-size:clamp(1.8rem,4vw,2.8rem);margin-bottom:16px}
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:8px;
-  margin-top:4px;
+  margin-top:18px;
 }
 .sport-card{margin:0}
 .sport-card button{
@@ -334,7 +338,67 @@ h2{font-size:clamp(1.8rem,4vw,2.8rem);margin-bottom:16px}
   line-height:1.05;
   letter-spacing:-.02em;
 }
-.mine{margin-top:18px}
+.game-cards{
+  display:grid;
+  gap:8px;
+  margin-top:18px;
+}
+.game-card{margin:0}
+.game-card button{
+  display:grid;
+  grid-template-columns:4.2rem 1fr;
+  gap:4px 16px;
+  align-items:start;
+  width:100%;
+  padding:14px 14px 12px;
+  text-align:left;
+  cursor:pointer;
+  background:var(--panel);
+  color:var(--fg);
+  border:1px solid var(--line);
+  font-family:inherit;
+  transition:background .18s var(--ease-out),color .18s var(--ease-out),border-color .18s var(--ease-out);
+}
+.game-card button:hover,
+.game-card button:focus-visible{
+  background:var(--fg);
+  color:var(--bg);
+  border-color:var(--fg);
+}
+.game-card-clock{
+  font-family:var(--mono);
+  font-size:13px;
+  letter-spacing:.04em;
+  padding-top:2px;
+}
+.game-card .comp{
+  display:block;
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.game-card strong{
+  display:block;
+  font-family:var(--serif);
+  font-size:1.22rem;
+  font-weight:400;
+  line-height:1.08;
+  letter-spacing:-.02em;
+  margin-top:4px;
+}
+.game-card .sport-card-hint{
+  grid-column:2;
+}
+.game-card button:hover .comp,
+.game-card button:hover .sport-card-hint,
+.game-card button:focus-visible .comp,
+.game-card button:focus-visible .sport-card-hint{
+  color:inherit;
+  opacity:.7;
+}
+.mine{margin-top:0}
 .mine .ev{grid-template-columns:4.6rem 1fr}
 .mine-full{margin-top:32px}
 .kicker a{color:inherit}

@@ -6,9 +6,9 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 
 - Catálogo: `futebol`, `nfl`, `nba`, `automobilismo`. **Sem corrida.**
 - `SportsCatalog.find!` recusa slug fora da lista e inclui o valor recebido na mensagem.
-- Agenda pessoal em SQLite (`agenda_items`). A grade da TV é HTML em `views/index.erb`.
+- Agenda pessoal em SQLite (`agenda_items`). Confrontos da TV em `lib/tv_grid.rb`; a grade editorial continua em `views/index.erb`.
 - CRUD de `agenda_items`: `GET /agenda`, `GET /agenda/:id`, `GET /agenda/:id/edit`, `POST /agenda`, `PATCH /agenda/:id`, `DELETE /agenda/:id`. Item ausente → 404. Esporte desconhecido → 422.
-- A agendinha usa quatro `.sport-card` (um form cada). Clique grava o esporte no dia selecionado, sem `<select>` e sem botão “Colocar na agenda”. Sem título, o store usa o nome do catálogo.
+- A agendinha usa `.game-card` (um form cada, com `sport` + `title` do confronto). Clique grava o jogo no dia selecionado. Dia sem grade cai nos quatro `.sport-card`. Sem `<select>` e sem botão “Colocar na agenda”. Sem título, o store usa o nome do catálogo. A lista sempre mostra esporte + título.
 - Calendário começa no domingo. Dia marcado = tem item naquele mês.
 - Copy em português. `noindex`. Preview local fora da porta 8765 (use 8791).
 
@@ -17,6 +17,7 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 | Path | O quê |
 | --- | --- |
 | `lib/sports_catalog.rb` | Catálogo congelado |
+| `lib/tv_grid.rb` | Confrontos da TV por dia |
 | `lib/agenda_store.rb` | SQLite |
 | `lib/month_grid.rb` | Células do mês |
 | `app.rb` | Rotas Sinatra |

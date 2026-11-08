@@ -16,8 +16,8 @@
 <section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto" id="agendinha">
   <div class="wrap">
     <p class="kicker">/// 00 · agendinha · <a href="/agenda">minha agenda</a></p>
-    <h2>Clica no esporte. Entra no dia.</h2>
-    <p class="lead">O calendário escolhe o dia. O card escreve. Quatro esportes, um clique, grava no SQLite. A grade de baixo continua a da TV — isto aqui é o que você resolveu assistir.</p>
+    <h2>Clica no jogo. Entra no dia.</h2>
+    <p class="lead">O calendário escolhe o dia. O card do confronto escreve. A grade de baixo continua a da TV — isto aqui é o que você resolveu assistir.</p>
 
     <div class="agenda-grid">
       <div>
@@ -39,41 +39,59 @@
       </div>
 
       <div>
-        <div class="sport-cards" role="group" aria-label="Colocar esporte no dia <%= day.strftime('%d/%m') %>">
-          <% sports.each do |sport| %>
-            <form method="post" action="/agenda" class="sport-card">
-              <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
-              <input type="hidden" name="day" value="<%= day.iso8601 %>">
-              <input type="hidden" name="sport" value="<%= sport.slug %>">
-              <button type="submit" aria-label="Colocar <%= sport.name %> no dia <%= day.strftime('%d/%m') %>">
-                <span class="sport-card-day"><%= day.strftime("%d/%m") %></span>
-                <strong><%= sport.name %></strong>
-                <span class="sport-card-hint">coloca no dia</span>
-              </button>
-            </form>
-          <% end %>
-        </div>
-
         <div class="mine">
           <% if on_day.empty? %>
-            <p class="note">Nada neste dia. Clica num esporte.</p>
+            <p class="note"><%= games.any? ? "Nada neste dia. Clica num jogo." : "Nada neste dia. Clica num esporte." %></p>
           <% else %>
             <% on_day.each do |item| %>
               <article class="ev" data-s="<%= sport_filter(item.sport) %>">
                 <time datetime="<%= item.starts_on.iso8601 %>"><%= item.starts_on.strftime("%d/%m") %></time>
                 <div>
-                  <% if item.title == sport_name(item.sport) %>
-                    <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
-                  <% else %>
-                    <p class="comp"><%= sport_name(item.sport) %></p>
-                    <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
-                  <% end %>
+                  <p class="comp"><%= sport_name(item.sport) %></p>
+                  <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
                   <%= item_actions(item) %>
                 </div>
               </article>
             <% end %>
           <% end %>
         </div>
+
+        <% if games.any? %>
+          <div class="game-cards" role="group" aria-label="Colocar jogo no dia <%= day.strftime('%d/%m') %>">
+            <% games.each do |game| %>
+              <form method="post" action="/agenda" class="game-card" data-s="<%= sport_filter(game.sport) %>">
+                <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
+                <input type="hidden" name="day" value="<%= day.iso8601 %>">
+                <input type="hidden" name="sport" value="<%= game.sport %>">
+                <input type="hidden" name="title" value="<%= game.title %>">
+                <button type="submit" aria-label="Colocar <%= game.title %> no dia <%= day.strftime('%d/%m') %>">
+                  <span class="game-card-clock"><%= game.clock %></span>
+                  <span>
+                    <span class="comp"><%= game.competition %></span>
+                    <strong><%= game.title %></strong>
+                  </span>
+                  <span class="sport-card-hint">coloca no dia</span>
+                </button>
+              </form>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="note">Nenhum jogo na grade neste dia. Clica num esporte se quiser marcar mesmo assim.</p>
+          <div class="sport-cards" role="group" aria-label="Colocar esporte no dia <%= day.strftime('%d/%m') %>">
+            <% sports.each do |sport| %>
+              <form method="post" action="/agenda" class="sport-card">
+                <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
+                <input type="hidden" name="day" value="<%= day.iso8601 %>">
+                <input type="hidden" name="sport" value="<%= sport.slug %>">
+                <button type="submit" aria-label="Colocar <%= sport.name %> no dia <%= day.strftime('%d/%m') %>">
+                  <span class="sport-card-day"><%= day.strftime("%d/%m") %></span>
+                  <strong><%= sport.name %></strong>
+                  <span class="sport-card-hint">coloca no dia</span>
+                </button>
+              </form>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </div>
   </div>
