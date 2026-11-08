@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# systemd ProtectHome=true hides /home, where mise keeps Ruby. The
+# release_command copies that prefix to RUBY_PREFIX (default
+# /opt/agenda-esportes/ruby) so this process can actually exec it.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+PREFIX="${RUBY_PREFIX:-/opt/agenda-esportes/ruby}"
+RUBY="$PREFIX/bin/ruby"
+
+if [[ ! -x "$RUBY" ]]; then
+  printf 'ruby prefix missing: %s (ProtectHome hides mise under /home)\n' "$PREFIX" >&2
+  exit 127
+fi
+
+export PATH="$PREFIX/bin:$PATH"
+export BUNDLE_PATH="${BUNDLE_PATH:-$PWD/vendor/bundle}"
+export BUNDLE_WITHOUT="${BUNDLE_WITHOUT:-development:test}"
+
+exec "$RUBY" -S bundle exec puma -C config/puma.rb

@@ -21,7 +21,7 @@ O catálogo de esportes **não** inclui corrida. O slug é `automobilismo`.
 
 ## Deploy
 
-Cleat runtime `rails` (instala Ruby via mise), app `agenda-esportes`.
+Cleat runtime `rails` (instala Ruby via mise), app `agenda-esportes`. O systemd esconde `/home`, então o deploy copia o Ruby do mise para `/opt/agenda-esportes/ruby` e o processo sobe com `bash bin/boot`.
 
 ```
 cleat__deploy app=agenda-esportes ref=main

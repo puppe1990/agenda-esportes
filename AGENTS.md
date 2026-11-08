@@ -23,3 +23,5 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 | `test/` | Minitest + Faker + rack-test |
 
 Não virar Rails. Não reintroduzir corrida.
+
+O unit do Cleat usa `ProtectHome=true`, então o Ruby do mise em `/home/ubuntu` some na hora de subir. `release_command` copia o prefixo para `/opt/agenda-esportes/ruby` e `bin/boot` chama esse Ruby.

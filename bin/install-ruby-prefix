@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Copy the mise/system Ruby prefix into a directory the systemd unit can
+# read (ProtectHome=true hides /home/ubuntu/.local/share/mise).
+set -euo pipefail
+
+DEST="${RUBY_PREFIX:-}"
+if [[ -z "$DEST" ]]; then
+  if [[ -n "${CLEAT_DATA_DIR:-}" ]]; then
+    DEST="${CLEAT_DATA_DIR%/data}/ruby"
+  else
+    DEST="/opt/agenda-esportes/ruby"
+  fi
+fi
+
+SRC="${RUBY_SRC:-}"
+if [[ -z "$SRC" ]]; then
+  SRC="$(ls -d /home/ubuntu/.local/share/mise/installs/ruby/*/ 2>/dev/null | sort -V | tail -1 || true)"
+  SRC="${SRC%/}"
+fi
+if [[ -z "$SRC" || ! -x "${SRC}/bin/ruby" ]]; then
+  if command -v ruby >/dev/null 2>&1; then
+    SRC="$(ruby -e 'print RbConfig::CONFIG["prefix"]')"
+  fi
+fi
+
+case "$SRC" in
+  ""|/|/usr|/usr/local|/opt|/home)
+    printf 'refusing to copy system prefix %s\n' "${SRC:-empty}" >&2
+    exit 1
+    ;;
+esac
+
+if [[ ! -x "$SRC/bin/ruby" ]]; then
+  printf 'cannot find a ruby prefix to copy (RUBY_SRC=%s)\n' "${SRC:-empty}" >&2
+  exit 1
+fi
+
+if [[ "$SRC" == "$DEST" ]]; then
+  printf 'ruby prefix already at %s\n' "$DEST"
+  exit 0
+fi
+
+mkdir -p "$(dirname "$DEST")"
+rm -rf "$DEST"
+cp -a "$SRC" "$DEST"
+chmod -R a+rX "$DEST"
+printf 'copied ruby prefix %s -> %s\n' "$SRC" "$DEST"

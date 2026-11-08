@@ -1,5 +1,6 @@
 {
   "runtime": "rails",
   "ruby_version": "3.3.6",
-  "start_command": "bundle exec puma -C config/puma.rb"
+  "release_command": "bash bin/install-ruby-prefix",
+  "start_command": "bash bin/boot"
 }
