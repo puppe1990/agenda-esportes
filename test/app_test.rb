@@ -159,6 +159,18 @@ class AppTest < Minitest::Test
     assert_match(/pênaltis|penaltis/i, last_response.body)
   end
 
+  def test_home_lists_saved_items_in_kickoff_order
+    day = Date.new(2026, 11, 8)
+    AgendaEsportes::App.store.add(sport: "nfl", starts_at: day, title: Faker::Team.name, kicks_at: "22h20")
+    AgendaEsportes::App.store.add(sport: "futebol", starts_at: day, title: Faker::Sports::Football.team, kicks_at: "11h")
+    AgendaEsportes::App.store.add(sport: "nba", starts_at: day, title: Faker::Team.name, kicks_at: "17h30")
+
+    get "/?dia=2026-11-08"
+
+    clocks = last_response.body.scan(%r{<time datetime="2026-11-08">([^<]+)</time>}).flatten
+    assert_equal %w[11h 17h30 22h20], clocks
+  end
+
   def test_saved_item_always_shows_sport_and_match
     title = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
     item = AgendaEsportes::App.store.add(

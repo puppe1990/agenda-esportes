@@ -14,6 +14,13 @@ class AgendaStore
 
       starts_on.strftime("%d/%m")
     end
+
+    def kickoff_minutes
+      match = kicks_at.to_s.strip.match(/\A(\d{1,2})h(\d{2})?\z/)
+      return 24 * 60 unless match
+
+      (match[1].to_i * 60) + (match[2] || "0").to_i
+    end
   end
 
   def initialize(path)
@@ -38,15 +45,17 @@ class AgendaStore
   end
 
   def all
-    @db.execute("SELECT * FROM agenda_items ORDER BY starts_on ASC, id ASC").map { |row| hydrate(row) }
+    sort_by_kickoff(@db.execute("SELECT * FROM agenda_items").map { |row| hydrate(row) })
   end
 
   def items_on(day)
     date = coerce_date(day)
-    @db.execute(
-      "SELECT * FROM agenda_items WHERE starts_on = ? ORDER BY id ASC",
-      [date.iso8601]
-    ).map { |row| hydrate(row) }
+    sort_by_kickoff(
+      @db.execute(
+        "SELECT * FROM agenda_items WHERE starts_on = ?",
+        [date.iso8601]
+      ).map { |row| hydrate(row) }
+    )
   end
 
   def days_with_items(year, month)
@@ -139,6 +148,10 @@ class AgendaStore
   def blank_to_nil(value)
     cleaned = value.to_s.strip
     cleaned.empty? ? nil : cleaned
+  end
+
+  def sort_by_kickoff(items)
+    items.sort_by { |item| [item.starts_on, item.kickoff_minutes, item.id] }
   end
 
   def require_item(id)

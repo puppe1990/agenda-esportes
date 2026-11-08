@@ -152,6 +152,32 @@ class AgendaStoreTest < Minitest::Test
     assert_nil @store.find("abc")
   end
 
+  def test_items_on_orders_by_kickoff
+    day = Date.new(2026, 11, 8)
+    late = Faker::Team.name
+    early = Faker::Sports::Football.team
+    mid = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+
+    @store.add(sport: "nfl", starts_at: day, title: late, kicks_at: "22h20")
+    @store.add(sport: "nba", starts_at: day, title: Faker::Team.name)
+    @store.add(sport: "futebol", starts_at: day, title: early, kicks_at: "11h")
+    @store.add(sport: "futebol", starts_at: day, title: mid, kicks_at: "17h30")
+
+    assert_equal ["11h", "17h30", "22h20", "08/11"], @store.items_on(day).map(&:clock)
+  end
+
+  def test_all_orders_by_day_then_kickoff
+    late_sunday = Faker::Team.name
+    monday = Faker::Team.name
+    early_sunday = Faker::Sports::Football.team
+
+    @store.add(sport: "nfl", starts_at: Date.new(2026, 11, 8), title: late_sunday, kicks_at: "22h15")
+    @store.add(sport: "nba", starts_at: Date.new(2026, 11, 9), title: monday, kicks_at: "19h30")
+    @store.add(sport: "futebol", starts_at: Date.new(2026, 11, 8), title: early_sunday, kicks_at: "11h")
+
+    assert_equal [early_sunday, late_sunday, monday], @store.all.map(&:title)
+  end
+
   def test_add_keeps_kickoff_and_note
     note = Faker::Lorem.sentence
 
