@@ -389,8 +389,21 @@ h2{font-size:clamp(1.8rem,4vw,2.8rem);margin-bottom:16px}
   letter-spacing:-.02em;
   margin-top:4px;
 }
+.game-card-where,
+.game-card-note{
+  display:block;
+  font-size:13.5px;
+  color:var(--muted);
+  line-height:1.35;
+}
+.game-card-where{margin-top:8px}
+.game-card-note{margin-top:3px;max-width:54ch}
 .game-card button:hover .comp,
-.game-card button:focus-visible .comp{
+.game-card button:focus-visible .comp,
+.game-card button:hover .game-card-where,
+.game-card button:focus-visible .game-card-where,
+.game-card button:hover .game-card-note,
+.game-card button:focus-visible .game-card-note{
   color:inherit;
   opacity:.7;
 }

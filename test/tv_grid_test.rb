@@ -12,6 +12,23 @@ class TvGridTest < Minitest::Test
     assert_equal "futebol", vasco.sport
     assert_equal "Copa do Brasil · volta da semi", vasco.competition
     assert_equal "17h", vasco.clock
+    assert_includes vasco.where, "Globo"
+    assert_match(/pênaltis|penaltis/i, vasco.note)
+    assert_match(/1.?0/, vasco.note)
+  end
+
+  def test_every_game_has_where_to_watch_and_a_note
+    TvGrid::ALL.each do |game|
+      refute_empty game.where, "#{game.title} missing where"
+      refute_empty game.note, "#{game.title} missing note"
+    end
+  end
+
+  def test_bills_monday_night_is_the_round_pick
+    bills = TvGrid.on(Date.new(2026, 11, 9)).first
+
+    assert_includes bills.where, "ESPN"
+    assert_match(/6.?1/, bills.note)
   end
 
   def test_on_returns_games_for_that_day_only

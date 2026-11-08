@@ -44,6 +44,25 @@ class AppTest < Minitest::Test
     refute_includes last_response.body, 'class="sport-card"'
   end
 
+  def test_home_game_cards_show_where_to_watch_and_a_game_note
+    get "/?dia=2026-11-08"
+
+    assert_includes last_response.body, 'class="game-card-where"'
+    assert_includes last_response.body, 'class="game-card-note"'
+    assert_includes last_response.body, "Globo"
+    assert_match(/pênaltis|penaltis/i, last_response.body)
+    assert_includes last_response.body, "Band"
+    assert_includes last_response.body, "CazéTV"
+  end
+
+  def test_monday_game_card_shows_espn_and_standings
+    get "/?dia=2026-11-09"
+
+    assert_includes last_response.body, "Bills x Vikings"
+    assert_includes last_response.body, "ESPN"
+    assert_match(/6.?1/, last_response.body)
+  end
+
   def test_home_renders_sport_cards_when_the_day_has_no_tv_games
     get "/?dia=2026-11-11"
 
