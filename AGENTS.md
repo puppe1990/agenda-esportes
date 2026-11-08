@@ -8,6 +8,7 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 - `SportsCatalog.find!` recusa slug fora da lista e inclui o valor recebido na mensagem.
 - Agenda pessoal em SQLite (`agenda_items`). A grade da TV é HTML em `views/index.erb`.
 - POST `/agenda` grava e redireciona para `/?dia=YYYY-MM-DD`. Esporte desconhecido → 422.
+- A agendinha usa quatro `.sport-card` (um form cada). Clique grava o esporte no dia selecionado, sem `<select>` e sem botão “Colocar na agenda”. Sem título, o store usa o nome do catálogo.
 - Calendário começa no domingo. Dia marcado = tem item naquele mês.
 - Copy em português. `noindex`. Preview local fora da porta 8765 (use 8791).
 

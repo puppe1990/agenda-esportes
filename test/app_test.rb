@@ -29,14 +29,17 @@ class AppTest < Minitest::Test
     refute_match(/>corrida</i, last_response.body)
   end
 
-  def test_home_renders_a_month_agenda_and_the_place_button
+  def test_home_renders_sport_cards_that_post_straight_into_the_agenda
     get "/"
 
     assert_includes last_response.body, "agendinha"
-    assert_includes last_response.body, "Colocar na agenda"
-    assert_includes last_response.body, 'name="sport"'
+    assert_includes last_response.body, 'class="sport-card"'
     assert_includes last_response.body, 'value="automobilismo"'
+    assert_includes last_response.body, 'value="futebol"'
+    refute_includes last_response.body, "<select"
+    refute_includes last_response.body, "Colocar na agenda"
     refute_includes last_response.body, 'value="corrida"'
+    assert_equal 4, last_response.body.scan(/class="sport-card"/).size
   end
 
   def test_post_places_the_selected_sport_on_the_chosen_day
@@ -59,6 +62,23 @@ class AppTest < Minitest::Test
     assert_equal 1, stored.size
     assert_equal "automobilismo", stored.first.sport
     assert_equal title, stored.first.title
+  end
+
+  def test_post_without_title_uses_the_sport_name
+    post "/agenda", {
+      sport: "nba",
+      day: "2026-11-10",
+      authenticity_token: csrf_token
+    }
+
+    assert_equal 302, last_response.status
+    follow_redirect!
+
+    stored = AgendaEsportes::App.store.items_on(Date.new(2026, 11, 10))
+    assert_equal 1, stored.size
+    assert_equal "nba", stored.first.sport
+    assert_equal "NBA", stored.first.title
+    assert_includes last_response.body, "NBA"
   end
 
   def test_post_corrida_is_rejected
