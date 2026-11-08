@@ -92,6 +92,33 @@ module AgendaEsportes
       def item_actions(item)
         erb :_item_actions, locals: { item: item }, layout: false
       end
+
+      def saved_item(item)
+        erb :_saved_item, locals: { item: item }, layout: false
+      end
+
+      def fill_saved_broadcasts
+        store.all.each do |item|
+          next unless item.kicks_at.to_s.strip.empty?
+
+          game = TvGrid.on(item.starts_on).find { |candidate| candidate.title == item.title }
+          next unless game
+
+          store.update(
+            item.id,
+            sport: item.sport,
+            starts_at: item.starts_on,
+            title: item.title,
+            kicks_at: game.clock,
+            note: game.note,
+            watch_on: game.where
+          )
+        end
+      end
+    end
+
+    before do
+      fill_saved_broadcasts
     end
 
     get "/" do
@@ -121,7 +148,14 @@ module AgendaEsportes
 
     post "/agenda" do
       day = parse_day(params[:day])
-      store.add(sport: params[:sport], starts_at: day, title: params[:title])
+      store.add(
+        sport: params[:sport],
+        starts_at: day,
+        title: params[:title],
+        kicks_at: params[:kicks_at],
+        note: params[:note],
+        watch_on: params[:watch]
+      )
       redirect "/?dia=#{day.iso8601}", 302
     rescue SportsCatalog::UnknownSport
       halt 422, "esporte desconhecido"
@@ -130,7 +164,15 @@ module AgendaEsportes
     patch "/agenda/:id" do
       item = find_item!
       day = parse_day(params[:day])
-      store.update(item.id, sport: params[:sport], starts_at: day, title: params[:title])
+      store.update(
+        item.id,
+        sport: params[:sport],
+        starts_at: day,
+        title: params[:title],
+        kicks_at: params[:kicks_at],
+        note: params[:note],
+        watch_on: params[:watch]
+      )
       redirect "/agenda/#{item.id}", 302
     rescue SportsCatalog::UnknownSport
       halt 422, "esporte desconhecido"

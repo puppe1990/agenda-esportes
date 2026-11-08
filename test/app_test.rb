@@ -42,6 +42,10 @@ class AppTest < Minitest::Test
     refute_includes last_response.body, "Colocar na agenda"
     refute_includes last_response.body, 'value="corrida"'
     refute_includes last_response.body, 'class="sport-card"'
+    assert_includes last_response.body, 'name="kicks_at"'
+    assert_includes last_response.body, 'value="17h"'
+    assert_includes last_response.body, 'name="note"'
+    assert_includes last_response.body, 'name="watch"'
   end
 
   def test_home_game_cards_show_where_to_watch_and_a_game_note
@@ -118,6 +122,41 @@ class AppTest < Minitest::Test
       %r{<h3><a href="/agenda/#{stored.first.id}">Futebol</a></h3>},
       last_response.body
     )
+  end
+
+  def test_post_game_keeps_kickoff_and_note_on_the_agenda
+    note = "São Januário. Ida 1–0 Palmeiras. Sem prorrogação: empate no agregado vai a pênaltis."
+
+    post "/agenda", {
+      sport: "futebol",
+      day: "2026-11-08",
+      title: "Vasco x Palmeiras",
+      kicks_at: "17h",
+      note: note,
+      watch: "Globo, ge tv · sportv, Premiere, Prime",
+      authenticity_token: csrf_token
+    }
+
+    assert_equal 302, last_response.status
+    follow_redirect!
+
+    stored = AgendaEsportes::App.store.items_on(Date.new(2026, 11, 8)).first
+    assert_equal "17h", stored.kicks_at
+    assert_equal note, stored.note
+    assert_equal "Globo, ge tv · sportv, Premiere, Prime", stored.watch_on
+    assert_match(%r{<time datetime="2026-11-08">17h</time>}, last_response.body)
+    assert_includes last_response.body, 'class="meta"'
+    assert_match(/pênaltis|penaltis/i, last_response.body)
+
+    get "/agenda/#{stored.id}"
+    assert last_response.ok?
+    assert_includes last_response.body, "17h"
+    assert_includes last_response.body, "Globo"
+    assert_match(/pênaltis|penaltis/i, last_response.body)
+
+    get "/agenda"
+    assert_match(%r{<time datetime="2026-11-08">17h</time>}, last_response.body)
+    assert_match(/pênaltis|penaltis/i, last_response.body)
   end
 
   def test_saved_item_always_shows_sport_and_match
@@ -317,6 +356,22 @@ class AppTest < Minitest::Test
     delete "/agenda/9999", { authenticity_token: csrf_token }
 
     assert_equal 404, last_response.status
+  end
+
+  def test_saved_match_without_details_fills_from_the_tv_grid
+    AgendaEsportes::App.store.add(
+      sport: "futebol",
+      starts_at: Date.new(2026, 11, 8),
+      title: "Vasco x Palmeiras"
+    )
+
+    get "/?dia=2026-11-08"
+
+    stored = AgendaEsportes::App.store.items_on(Date.new(2026, 11, 8)).first
+    assert_equal "17h", stored.kicks_at
+    assert_match(/pênaltis|penaltis/i, stored.note)
+    assert_includes stored.watch_on, "Globo"
+    assert_match(%r{<time datetime="2026-11-08">17h</time>}, last_response.body)
   end
 
   def test_home_item_links_to_show_edit_and_delete

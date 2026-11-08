@@ -151,4 +151,77 @@ class AgendaStoreTest < Minitest::Test
     assert_nil @store.find(123)
     assert_nil @store.find("abc")
   end
+
+  def test_add_keeps_kickoff_and_note
+    note = Faker::Lorem.sentence
+
+    item = @store.add(
+      sport: "futebol",
+      starts_at: Date.new(2026, 11, 8),
+      title: "Vasco x Palmeiras",
+      kicks_at: "17h",
+      note: note,
+      watch_on: "Globo, ge tv"
+    )
+
+    assert_equal "17h", item.kicks_at
+    assert_equal note, item.note
+    assert_equal "Globo, ge tv", item.watch_on
+    assert_equal "17h", item.clock
+  end
+
+  def test_item_without_kickoff_clock_is_the_date
+    item = @store.add(
+      sport: "nba",
+      starts_at: Date.new(2026, 11, 11),
+      title: Faker::Team.name
+    )
+
+    assert_nil item.kicks_at
+    assert_nil item.note
+    assert_equal "11/11", item.clock
+  end
+
+  def test_survives_reopen_with_kickoff_and_note
+    note = Faker::Lorem.sentence
+    @store.add(
+      sport: "nfl",
+      starts_at: Date.new(2026, 11, 9),
+      title: "Bills x Vikings",
+      kicks_at: "22h15",
+      note: note,
+      watch_on: "ESPN"
+    )
+
+    item = AgendaStore.new(@path).all.first
+
+    assert_equal "22h15", item.kicks_at
+    assert_equal note, item.note
+    assert_equal "ESPN", item.watch_on
+  end
+
+  def test_migrates_kickoff_columns_onto_an_existing_table
+    path = File.join(@dir, "legacy.sqlite3")
+    SQLite3::Database.new(path).execute <<~SQL
+      CREATE TABLE agenda_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sport TEXT NOT NULL,
+        title TEXT NOT NULL,
+        starts_on TEXT NOT NULL
+      )
+    SQL
+
+    store = AgendaStore.new(path)
+    note = Faker::Lorem.sentence
+    item = store.add(
+      sport: "nfl",
+      starts_at: Date.new(2026, 11, 9),
+      title: "Bills x Vikings",
+      kicks_at: "22h15",
+      note: note
+    )
+
+    assert_equal "22h15", item.kicks_at
+    assert_equal note, item.note
+  end
 end

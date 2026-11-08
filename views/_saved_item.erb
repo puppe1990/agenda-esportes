@@ -1,0 +1,14 @@
+<article class="ev" data-s="<%= sport_filter(item.sport) %>">
+  <time datetime="<%= item.starts_on.iso8601 %>"><%= item.clock %></time>
+  <div>
+    <p class="comp"><%= sport_name(item.sport) %></p>
+    <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
+    <% unless item.watch_on.to_s.strip.empty? %>
+      <p class="where"><%= item.watch_on %></p>
+    <% end %>
+    <% unless item.note.to_s.strip.empty? %>
+      <p class="meta"><%= item.note %></p>
+    <% end %>
+    <%= item_actions(item) %>
+  </div>
+</article>

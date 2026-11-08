@@ -1,8 +1,14 @@
 <main id="conteudo">
 <section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto app-page">
   <div class="wrap">
-    <p class="kicker"><%= sport_name(item.sport) %> · <%= item.starts_on.strftime("%d/%m") %></p>
+    <p class="kicker"><%= sport_name(item.sport) %> · <%= item.starts_on.strftime("%d/%m") %><% unless item.kicks_at.to_s.strip.empty? %> · <%= item.kicks_at %><% end %></p>
     <h1><%= item.title %></h1>
+    <% unless item.watch_on.to_s.strip.empty? %>
+      <p class="where"><%= item.watch_on %></p>
+    <% end %>
+    <% unless item.note.to_s.strip.empty? %>
+      <p class="lead"><%= item.note %></p>
+    <% end %>
     <%= item_actions(item) %>
     <p class="note">
       <a href="/?dia=<%= item.starts_on.iso8601 %>">ver no dia</a>

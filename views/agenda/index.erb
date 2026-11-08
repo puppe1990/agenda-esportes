@@ -6,14 +6,7 @@
         <p class="note">Nada na agenda. <a href="/">Escolher um jogo</a></p>
       <% else %>
         <% items.each do |item| %>
-          <article class="ev" data-s="<%= sport_filter(item.sport) %>">
-            <time datetime="<%= item.starts_on.iso8601 %>"><%= item.starts_on.strftime("%d/%m") %></time>
-            <div>
-              <p class="comp"><%= sport_name(item.sport) %></p>
-              <h3><a href="/agenda/<%= item.id %>"><%= item.title %></a></h3>
-              <%= item_actions(item) %>
-            </div>
-          </article>
+          <%= saved_item(item) %>
         <% end %>
       <% end %>
     </div>

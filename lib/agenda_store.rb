@@ -8,7 +8,13 @@ require_relative "sports_catalog"
 class AgendaStore
   class NotFound < StandardError; end
 
-  Item = Struct.new(:id, :sport, :title, :starts_on, keyword_init: true)
+  Item = Struct.new(:id, :sport, :title, :starts_on, :kicks_at, :note, :watch_on, keyword_init: true) do
+    def clock
+      return kicks_at unless kicks_at.to_s.strip.empty?
+
+      starts_on.strftime("%d/%m")
+    end
+  end
 
   def initialize(path)
     FileUtils.mkdir_p(File.dirname(path))
@@ -18,14 +24,14 @@ class AgendaStore
     migrate
   end
 
-  def add(sport:, starts_at:, title: nil)
+  def add(sport:, starts_at:, title: nil, kicks_at: nil, note: nil, watch_on: nil)
     catalog = SportsCatalog.find!(sport)
     cleaned = blank_to_catalog_name(title, catalog)
     day = coerce_date(starts_at)
 
     @db.execute(
-      "INSERT INTO agenda_items (sport, title, starts_on) VALUES (?, ?, ?)",
-      [catalog.slug, cleaned, day.iso8601]
+      "INSERT INTO agenda_items (sport, title, starts_on, kicks_at, note, watch_on) VALUES (?, ?, ?, ?, ?, ?)",
+      [catalog.slug, cleaned, day.iso8601, blank_to_nil(kicks_at), blank_to_nil(note), blank_to_nil(watch_on)]
     )
 
     find(@db.last_insert_row_id)
@@ -52,15 +58,15 @@ class AgendaStore
     ).map { |row| Date.iso8601(row["starts_on"]) }
   end
 
-  def update(id, sport:, starts_at:, title: nil)
+  def update(id, sport:, starts_at:, title: nil, kicks_at: nil, note: nil, watch_on: nil)
     current = require_item(id)
     catalog = SportsCatalog.find!(sport)
     cleaned = blank_to_catalog_name(title, catalog)
     day = coerce_date(starts_at)
 
     @db.execute(
-      "UPDATE agenda_items SET sport = ?, title = ?, starts_on = ? WHERE id = ?",
-      [catalog.slug, cleaned, day.iso8601, current.id]
+      "UPDATE agenda_items SET sport = ?, title = ?, starts_on = ?, kicks_at = ?, note = ?, watch_on = ? WHERE id = ?",
+      [catalog.slug, cleaned, day.iso8601, blank_to_nil(kicks_at), blank_to_nil(note), blank_to_nil(watch_on), current.id]
     )
 
     find(current.id)
@@ -88,9 +94,22 @@ class AgendaStore
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sport TEXT NOT NULL,
         title TEXT NOT NULL,
-        starts_on TEXT NOT NULL
+        starts_on TEXT NOT NULL,
+        kicks_at TEXT,
+        note TEXT,
+        watch_on TEXT
       )
     SQL
+    ensure_column("kicks_at")
+    ensure_column("note")
+    ensure_column("watch_on")
+  end
+
+  def ensure_column(name)
+    names = @db.execute("PRAGMA table_info(agenda_items)").map { |row| row["name"] }
+    return if names.include?(name)
+
+    @db.execute("ALTER TABLE agenda_items ADD COLUMN #{name} TEXT")
   end
 
   def hydrate(row)
@@ -98,7 +117,10 @@ class AgendaStore
       id: row["id"],
       sport: row["sport"],
       title: row["title"],
-      starts_on: Date.iso8601(row["starts_on"])
+      starts_on: Date.iso8601(row["starts_on"]),
+      kicks_at: row["kicks_at"],
+      note: row["note"],
+      watch_on: row["watch_on"]
     )
   end
 
@@ -112,6 +134,11 @@ class AgendaStore
   def blank_to_catalog_name(title, catalog)
     cleaned = title.to_s.strip
     cleaned.empty? ? catalog.name : cleaned
+  end
+
+  def blank_to_nil(value)
+    cleaned = value.to_s.strip
+    cleaned.empty? ? nil : cleaned
   end
 
   def require_item(id)
