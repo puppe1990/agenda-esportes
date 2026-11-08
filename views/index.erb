@@ -1,0 +1,417 @@
+<main id="conteudo">
+
+<section data-theme="ink" class="blk blk-fut blk-nfl blk-nba blk-auto">
+  <div class="wrap">
+    <p class="kicker">/// 08 · nov · 26</p>
+    <h1>Domingo lotado.</h1>
+    <p class="lead">Futebol, NFL, NBA e automobilismo no mesmo dia. Horário de Brasília. Quando dois jogos caem no mesmo minuto, fica o que eu escolheria — o resto vai para o segundo aparelho.</p>
+    <div class="hero-meta">
+      <span>Atualizado <b>8 nov, 12h</b></span>
+      <span>Grade <b>hoje + semana</b></span>
+      <span>F1 <b>Interlagos 14h</b></span>
+    </div>
+  </div>
+</section>
+
+<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto" id="agendinha">
+  <div class="wrap">
+    <p class="kicker">/// 00 · agendinha</p>
+    <h2>Escolhe o esporte e coloca no dia.</h2>
+    <p class="lead">Clica no dia, escolhe o esporte, aperta o botão. Grava no SQLite. A grade de baixo continua a da TV — isto aqui é o que você resolveu assistir.</p>
+
+    <div class="agenda-grid">
+      <div>
+        <div class="day-head">
+          <h3><%= month_title(day) %></h3>
+          <span><%= day.strftime("%d/%m") %></span>
+        </div>
+        <div class="cal" aria-label="Calendário de <%= month_title(day) %>">
+          <% grid.weekday_labels.each do |label| %>
+            <span><%= label %></span>
+          <% end %>
+          <% grid.cells.each do |cell| %>
+            <a
+              href="/?dia=<%= cell.date.iso8601 %>"
+              class="<%= 'is-out' unless cell.in_month %><%= ' is-marked' if cell.marked %><%= ' is-on' if cell.date == day %>"
+            ><%= cell.date.day %></a>
+          <% end %>
+        </div>
+      </div>
+
+      <div>
+        <form class="place-form" method="post" action="/agenda">
+          <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
+          <input type="hidden" name="day" value="<%= day.iso8601 %>">
+          <label class="filtro" for="sport">Esporte</label>
+          <select id="sport" name="sport" required>
+            <% sports.each do |sport| %>
+              <option value="<%= sport.slug %>"><%= sport.name %></option>
+            <% end %>
+          </select>
+          <input type="text" name="title" placeholder="título (opcional)" autocomplete="off">
+          <button type="submit">Colocar na agenda</button>
+        </form>
+
+        <div class="mine">
+          <% if on_day.empty? %>
+            <p class="note">Nada neste dia. Escolhe um esporte e coloca.</p>
+          <% else %>
+            <% on_day.each do |item| %>
+              <article class="ev" data-s="<%= item.sport %>">
+                <time datetime="<%= item.starts_on.iso8601 %>"><%= item.starts_on.strftime("%d/%m") %></time>
+                <div>
+                  <p class="comp"><%= sport_name(item.sport) %></p>
+                  <h3><%= item.title %></h3>
+                </div>
+              </article>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-theme="accent" class="blk blk-fut blk-nba">
+  <div class="wrap">
+    <p class="kicker">/// 01 · o choque das 17h</p>
+    <h2>Três esportes, um relógio.</h2>
+    <p class="lead">Às 14h apagam as luzes em Interlagos. Às 17h o Vasco recebe o Palmeiras em São Januário. O Atlético de Madrid recebe o Barcelona. Meia hora depois os 76ers jogam em Chicago. Dá para assistir. Não dá para prestar atenção em tudo.</p>
+    <div class="clash">
+      <article class="card pick-card">
+        <span class="tag">escolha</span>
+        <p class="comp">Copa do Brasil · volta da semi</p>
+        <h3>Vasco x Palmeiras</h3>
+        <p>Palmeiras ganhou a ida por 1 a 0. Joga pelo empate. Vasco precisa virar em casa. Grêmio já está na final. Globo no ar para o país inteiro.</p>
+        <p class="where"><span class="free">Globo, ge tv</span> · sportv, Premiere, Prime Video</p>
+      </article>
+      <article class="card">
+        <span class="tag">2º aparelho</span>
+        <p class="comp">La Liga</p>
+        <h3>Atlético x Barcelona</h3>
+        <p>O clássico europeu do domingo. CazéTV de graça. Se o Vasco já estiver resolvido no segundo tempo, muda o canal.</p>
+        <p class="where"><span class="free">CazéTV</span></p>
+      </article>
+      <article class="card">
+        <span class="tag">espera</span>
+        <p class="comp">NBA</p>
+        <h3>76ers x Bulls</h3>
+        <p>17h30. Philadelphia 8–2 contra Chicago 1–7. League Pass. A NBA de verdade deste domingo é às 20h, Lakers em Detroit.</p>
+        <p class="where">NBA League Pass</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto">
+  <div class="wrap">
+    <p class="kicker">/// 02 · hoje</p>
+    <h2>A grade que sobrou.</h2>
+    <p class="lead">Tirei o excesso. Premier League às 11h tem quatro jogos; fica Palace x Liverpool. NFL das 15h tem sete; fica Jets em Kansas City. No meio da tarde, Interlagos.</p>
+
+    <div class="day">
+      <div class="day-head">
+        <h3>Domingo, 8 de novembro</h3>
+        <span>manhã → madrugada</span>
+      </div>
+
+      <article class="ev is-pick" data-s="fut" data-start="2026-11-08T11:00:00-03:00" data-end="2026-11-08T13:00:00-03:00">
+        <time datetime="2026-11-08T11:00">11h</time>
+        <div>
+          <p class="comp">Premier League <span class="mark">pick</span></p>
+          <h3>Crystal Palace x Liverpool</h3>
+          <p class="meta">Entre quatro jogos ingleses no mesmo horário. Liverpool é o que a CazéTV coloca na frente.</p>
+        </div>
+        <p class="where"><span class="free">CazéTV</span> · Disney+</p>
+      </article>
+
+      <article class="ev" data-s="fut" data-start="2026-11-08T11:00:00-03:00" data-end="2026-11-08T13:00:00-03:00">
+        <time datetime="2026-11-08T11:00">11h</time>
+        <div>
+          <p class="comp">Copa do Brasil feminina · semi</p>
+          <h3>RB Bragantino x Internacional</h3>
+          <p class="meta">Semifinal. Paralelo ao inglês da manhã.</p>
+        </div>
+        <p class="where">sportv, Xsports, N Sports, Lance! no YouTube</p>
+      </article>
+
+      <article class="ev is-pick" data-s="nfl" data-start="2026-11-08T11:30:00-03:00" data-end="2026-11-08T14:30:00-03:00">
+        <time datetime="2026-11-08T11:30">11h30</time>
+        <div>
+          <p class="comp">NFL · week 9 · Madri <span class="mark">pick</span></p>
+          <h3>Bengals x Falcons</h3>
+          <p class="meta">No Santiago Bernabéu. NFL na casa do Real Madrid. Abre a rodada americana no Brasil.</p>
+        </div>
+        <p class="where">sportv2, ge tv · NFL Game Pass</p>
+      </article>
+
+      <article class="ev is-pick" data-s="fut" data-start="2026-11-08T13:30:00-03:00" data-end="2026-11-08T15:30:00-03:00">
+        <time datetime="2026-11-08T13:30">13h30</time>
+        <div>
+          <p class="comp">Premier League <span class="mark">pick</span></p>
+          <h3>Manchester United x Aston Villa</h3>
+          <p class="meta">Old Trafford. O inglês da tarde, antes da NFL das 15h.</p>
+        </div>
+        <p class="where">ESPN, Disney+, CazéTV</p>
+      </article>
+
+      <article class="ev is-pick" data-s="auto" data-start="2026-11-08T14:00:00-03:00" data-end="2026-11-08T16:00:00-03:00">
+        <time datetime="2026-11-08T14:00">14h</time>
+        <div>
+          <p class="comp">Fórmula 1 · GP de São Paulo <span class="mark">o grid</span></p>
+          <h3>Grande Prêmio de São Paulo</h3>
+          <p class="meta">Interlagos. 71 voltas no José Carlos Pace. Largada 14h de Brasília. Antes do Vasco.</p>
+        </div>
+        <p class="where">Band · Apple TV</p>
+      </article>
+
+      <article class="ev is-pick" data-s="nfl" data-start="2026-11-08T15:00:00-03:00" data-end="2026-11-08T18:00:00-03:00">
+        <time datetime="2026-11-08T15:00">15h</time>
+        <div>
+          <p class="comp">NFL · early window <span class="mark">pick</span></p>
+          <h3>Jets x Chiefs</h3>
+          <p class="meta">Arrowhead. Sete jogos neste horário; o sportv2 leva este. Broncos x Panthers sai na ESPN 2 se você quiser o outro.</p>
+        </div>
+        <p class="where">sportv2 · NFL Game Pass</p>
+      </article>
+
+      <article class="ev" data-s="nfl" data-start="2026-11-08T15:00:00-03:00" data-end="2026-11-08T18:00:00-03:00">
+        <time datetime="2026-11-08T15:00">15h</time>
+        <div>
+          <p class="comp">NFL · early window</p>
+          <h3>Broncos x Panthers</h3>
+          <p class="meta">O outro jogo da TV brasileira neste horário. Denver 6–2.</p>
+        </div>
+        <p class="where">ESPN 2, Disney+</p>
+      </article>
+
+      <article class="ev" data-s="fut" data-start="2026-11-08T16:00:00-03:00" data-end="2026-11-08T18:00:00-03:00">
+        <time datetime="2026-11-08T16:00">16h</time>
+        <div>
+          <p class="comp">Série B · 37ª rodada</p>
+          <h3>Athletic x Atlético-GO</h3>
+          <p class="meta">São João del-Rei. Acesso ainda aberto na B. Antes do Vasco.</p>
+        </div>
+        <p class="where">ESPN, Disney+</p>
+      </article>
+
+      <article class="ev is-pick" data-s="fut" data-start="2026-11-08T17:00:00-03:00" data-end="2026-11-08T19:00:00-03:00">
+        <time datetime="2026-11-08T17:00">17h</time>
+        <div>
+          <p class="comp">Copa do Brasil · volta da semi <span class="mark">o jogo</span></p>
+          <h3>Vasco x Palmeiras</h3>
+          <p class="meta">São Januário. Ida 1–0 Palmeiras. Sem prorrogação: empate no agregado vai a pênaltis.</p>
+        </div>
+        <p class="where"><span class="free">Globo, ge tv</span> · sportv, Premiere, Prime</p>
+      </article>
+
+      <article class="ev" data-s="fut" data-start="2026-11-08T17:00:00-03:00" data-end="2026-11-08T19:00:00-03:00">
+        <time datetime="2026-11-08T17:00">17h</time>
+        <div>
+          <p class="comp">La Liga</p>
+          <h3>Atlético de Madrid x Barcelona</h3>
+          <p class="meta">Mesmo minuto do Vasco. Segundo aparelho, ou o intervalo em São Januário.</p>
+        </div>
+        <p class="where"><span class="free">CazéTV</span></p>
+      </article>
+
+      <article class="ev" data-s="nba" data-start="2026-11-08T17:30:00-03:00" data-end="2026-11-08T20:00:00-03:00">
+        <time datetime="2026-11-08T17:30">17h30</time>
+        <div>
+          <p class="comp">NBA</p>
+          <h3>76ers x Bulls</h3>
+          <p class="meta">United Center. Abre a noite da NBA no meio do Vasco. Dá para deixar gravando.</p>
+        </div>
+        <p class="where">NBA League Pass</p>
+      </article>
+
+      <article class="ev is-pick" data-s="nfl" data-start="2026-11-08T18:25:00-03:00" data-end="2026-11-08T21:30:00-03:00">
+        <time datetime="2026-11-08T18:25">18h25</time>
+        <div>
+          <p class="comp">NFL · late window <span class="mark">pick</span></p>
+          <h3>Packers x Patriots</h3>
+          <p class="meta">Dois 5–3. O sportv2 fica neste. Na ESPN 2, no mesmo horário, Raiders em San Francisco (49ers 6–1).</p>
+        </div>
+        <p class="where">sportv2, ge tv</p>
+      </article>
+
+      <article class="ev" data-s="nfl" data-start="2026-11-08T18:25:00-03:00" data-end="2026-11-08T21:30:00-03:00">
+        <time datetime="2026-11-08T18:25">18h25</time>
+        <div>
+          <p class="comp">NFL · late window</p>
+          <h3>Raiders x 49ers</h3>
+          <p class="meta">Levi’s Stadium. O outro late game na TV brasileira.</p>
+        </div>
+        <p class="where">ESPN 2, Disney+</p>
+      </article>
+
+      <article class="ev" data-s="fut" data-start="2026-11-08T19:15:00-03:00" data-end="2026-11-08T21:15:00-03:00">
+        <time datetime="2026-11-08T19:15">19h15</time>
+        <div>
+          <p class="comp">Série B · 37ª rodada</p>
+          <h3>Ceará x América-MG</h3>
+          <p class="meta">Castelão. Depois do Vasco. Goiás x Ponte Preta no mesmo horário, só Disney+.</p>
+        </div>
+        <p class="where">Xsports, SportyNet, Disney+</p>
+      </article>
+
+      <article class="ev is-pick" data-s="nba" data-start="2026-11-08T20:00:00-03:00" data-end="2026-11-08T22:30:00-03:00">
+        <time datetime="2026-11-08T20:00">20h</time>
+        <div>
+          <p class="comp">NBA <span class="mark">pick</span></p>
+          <h3>Lakers x Pistons</h3>
+          <p class="meta">Detroit. Lakers 8–2, Pistons 6–2. Luka Dončić contra Cade Cunningham. O basquete do domingo.</p>
+        </div>
+        <p class="where">NBA League Pass</p>
+      </article>
+
+      <article class="ev" data-s="nba" data-start="2026-11-08T22:00:00-03:00" data-end="2026-11-09T00:30:00-03:00">
+        <time datetime="2026-11-08T22:00">22h</time>
+        <div>
+          <p class="comp">NBA</p>
+          <h3>Celtics x Bucks</h3>
+          <p class="meta">Milwaukee. Boston 7–2, Bucks 1–8. Choque com o Sunday Night Football.</p>
+        </div>
+        <p class="where">NBA League Pass</p>
+      </article>
+
+      <article class="ev is-pick" data-s="nfl" data-start="2026-11-08T22:20:00-03:00" data-end="2026-11-09T01:30:00-03:00">
+        <time datetime="2026-11-08T22:20">22h20</time>
+        <div>
+          <p class="comp">NFL · Sunday Night <span class="mark">pick</span></p>
+          <h3>Buccaneers x Bears</h3>
+          <p class="meta">Chicago 6–2 em casa. O jogo da noite na TV. Celtics x Bucks, se for o caso, fica no League Pass.</p>
+        </div>
+        <p class="where">sportv2 · NFL Game Pass</p>
+      </article>
+
+      <article class="ev" data-s="nba" data-start="2026-11-08T23:00:00-03:00" data-end="2026-11-09T01:30:00-03:00">
+        <time datetime="2026-11-08T23:00">23h</time>
+        <div>
+          <p class="comp">NBA · west</p>
+          <h3>Heat x Kings · Pelicans x Clippers</h3>
+          <p class="meta">Dois jogos da costa oeste no mesmo minuto. Madrugada. Só League Pass.</p>
+        </div>
+        <p class="where">NBA League Pass</p>
+      </article>
+    </div>
+
+    <p class="legend"><b>Grátis:</b> Globo, CazéTV, ge tv, Lance! YouTube, SportyNet YouTube, Band · <b>Pago:</b> Premiere, sportv, ESPN, Disney+, Prime, League Pass, NFL Game Pass, Apple TV</p>
+  </div>
+</section>
+
+<section data-theme="ink" class="blk blk-nfl blk-nba">
+  <div class="wrap">
+    <p class="kicker">/// 03 · segunda e terça</p>
+    <h2>A noite continua.</h2>
+    <p class="lead">Segunda é Night Football. Terça o basquete volta com peso: Celtics em Philadelphia.</p>
+
+    <div class="day">
+      <div class="day-head">
+        <h3>Segunda, 9 de novembro</h3>
+        <span>um jogo</span>
+      </div>
+      <article class="ev is-pick" data-s="nfl" data-start="2026-11-09T22:15:00-03:00" data-end="2026-11-10T01:30:00-03:00">
+        <time datetime="2026-11-09T22:15">22h15</time>
+        <div>
+          <p class="comp">NFL · Monday Night <span class="mark">pick</span></p>
+          <h3>Bills x Vikings</h3>
+          <p class="meta">Dois times 6–1. Josh Allen contra a defesa de Minnesota. O melhor jogo da rodada, guardado para segunda.</p>
+        </div>
+        <p class="where">ESPN, Disney+ Premium · NFL Game Pass</p>
+      </article>
+    </div>
+
+    <div class="day">
+      <div class="day-head">
+        <h3>Terça, 10 de novembro</h3>
+        <span>NBA</span>
+      </div>
+      <article class="ev is-pick" data-s="nba" data-start="2026-11-10T20:00:00-03:00" data-end="2026-11-10T22:30:00-03:00">
+        <time datetime="2026-11-10T20:00">20h</time>
+        <div>
+          <p class="comp">NBA <span class="mark">pick</span></p>
+          <h3>Celtics x 76ers</h3>
+          <p class="meta">Philadelphia. Boston 7–2 visita os Sixers 8–2. O leste no começo da temporada.</p>
+        </div>
+        <p class="where">NBA League Pass</p>
+      </article>
+      <article class="ev" data-s="nba" data-start="2026-11-10T19:30:00-03:00" data-end="2026-11-10T22:00:00-03:00">
+        <time datetime="2026-11-10T19:30">19h30</time>
+        <div>
+          <p class="comp">NBA</p>
+          <h3>Bucks x Knicks</h3>
+          <p class="meta">Madison Square Garden. Antes do Celtics–Sixers.</p>
+        </div>
+        <p class="where">NBA League Pass</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section data-theme="paper" class="blk blk-auto blk-fut">
+  <div class="wrap">
+    <p class="kicker">/// 04 · o que vem</p>
+    <h2>Las Vegas, finais no continente.</h2>
+    <p class="lead">Depois de Interlagos a F1 vai para o Strip, Catar e Abu Dhabi. No futebol, duas finais continentais e a Copa do Brasil em Brasília.</p>
+
+    <div class="soon">
+      <article class="ev" data-s="fut">
+        <time datetime="2026-11-21">21 nov</time>
+        <div>
+          <p class="comp">Sul-Americana · final</p>
+          <h3>Atlético-MG x Boca</h3>
+          <p class="meta">Metropolitano, Barranquilla. 20h de Brasília. SBT, Disney+ e Paramount+.</p>
+        </div>
+        <p class="where">SBT · Disney+ · Paramount+</p>
+      </article>
+      <article class="ev" data-s="auto">
+        <time datetime="2026-11-21">21 nov</time>
+        <div>
+          <p class="comp">Fórmula 1 · Las Vegas</p>
+          <h3>Grande Prêmio de Las Vegas</h3>
+          <p class="meta">Street Circuit. Largada à noite no Strip; no Brasil vira madrugada do dia 22.</p>
+        </div>
+        <p class="where">Band · Apple TV</p>
+      </article>
+      <article class="ev" data-s="fut">
+        <time datetime="2026-11-28">28 nov</time>
+        <div>
+          <p class="comp">Libertadores · final</p>
+          <h3>Palmeiras x Estudiantes</h3>
+          <p class="meta">Centenário, Montevidéu, 17h. Globo, ge tv, ESPN e Disney+.</p>
+        </div>
+        <p class="where">Globo · ESPN · Disney+</p>
+      </article>
+      <article class="ev" data-s="auto">
+        <time datetime="2026-11-29">29 nov</time>
+        <div>
+          <p class="comp">Fórmula 1 · Catar</p>
+          <h3>Grande Prêmio do Catar</h3>
+          <p class="meta">Losail. Penúltima prova do mundial.</p>
+        </div>
+        <p class="where">Band · Apple TV</p>
+      </article>
+      <article class="ev" data-s="fut">
+        <time datetime="2026-12-06">6 dez</time>
+        <div>
+          <p class="comp">Copa do Brasil · final</p>
+          <h3>Grêmio x vencedor de hoje</h3>
+          <p class="meta">Jogo único no Mané Garrincha, Brasília. O adversário do Grêmio sai de São Januário.</p>
+        </div>
+        <p class="where">Globo · Premiere</p>
+      </article>
+      <article class="ev" data-s="auto">
+        <time datetime="2026-12-06">6 dez</time>
+        <div>
+          <p class="comp">Fórmula 1 · Abu Dhabi</p>
+          <h3>Grande Prêmio de Abu Dhabi</h3>
+          <p class="meta">Yas Marina. Encerramento da temporada, mesmo domingo da final da Copa do Brasil.</p>
+        </div>
+        <p class="where">Band · Apple TV</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+</main>

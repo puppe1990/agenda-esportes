@@ -1,0 +1,5 @@
+{
+  "runtime": "rails",
+  "ruby_version": "3.3.6",
+  "start_command": "bundle exec puma -C config/puma.rb"
+}
