@@ -65,6 +65,10 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, "Bills x Vikings"
     assert_includes last_response.body, "ESPN"
     assert_match(/6.?1/, last_response.body)
+    assert_includes last_response.body, "Wizards x Pistons"
+    assert_includes last_response.body, "Lakers x Hawks"
+    assert_includes last_response.body, "Nuggets x Rockets"
+    refute_includes last_response.body, 'class="sport-card"'
   end
 
   def test_home_renders_sport_cards_when_the_day_has_no_tv_games

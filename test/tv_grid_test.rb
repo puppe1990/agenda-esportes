@@ -25,17 +25,27 @@ class TvGridTest < Minitest::Test
   end
 
   def test_bills_monday_night_is_the_round_pick
-    bills = TvGrid.on(Date.new(2026, 11, 9)).first
+    bills = TvGrid.on(Date.new(2026, 11, 9)).find { |game| game.title == "Bills x Vikings" }
 
+    refute_nil bills
     assert_includes bills.where, "ESPN"
     assert_match(/6.?1/, bills.note)
+    assert_equal "22h15", bills.clock
   end
 
   def test_on_returns_games_for_that_day_only
     monday = TvGrid.on(Date.new(2026, 11, 9))
 
-    assert_equal ["Bills x Vikings"], monday.map(&:title)
-    assert_equal "nfl", monday.first.sport
+    assert_equal [
+      "Wizards x Pistons",
+      "Lakers x Hawks",
+      "Grizzlies x Raptors",
+      "Bills x Vikings",
+      "Nuggets x Rockets",
+      "Spurs x Suns"
+    ], monday.map(&:title)
+    assert_equal "nba", monday.first.sport
+    assert_equal "nfl", monday.find { |game| game.title == "Bills x Vikings" }.sport
   end
 
   def test_empty_day_has_no_games
