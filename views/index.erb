@@ -9,13 +9,15 @@
         </div>
         <div class="cal" aria-label="Calendário de <%= month_title(day) %>">
           <% grid.weekday_labels.each do |label| %>
-            <span><%= label %></span>
+            <span class="cal-dow"><%= label %></span>
           <% end %>
           <% grid.cells.each do |cell| %>
-            <a
-              href="/?dia=<%= cell.date.iso8601 %>"
-              class="<%= 'is-out' unless cell.in_month %><%= ' is-marked' if cell.marked %><%= ' is-on' if cell.date == day %>"
-            ><%= cell.date.day %></a>
+            <div class="cal-cell<%= ' is-out' unless cell.in_month %><%= ' is-marked' if cell.marked %><%= ' is-on' if cell.date == day %>">
+              <a class="cal-num" href="/?dia=<%= cell.date.iso8601 %>"><%= cell.date.day %></a>
+              <% (month_games[cell.date] || []).each do |game| %>
+                <%= cal_event(game, day: cell.date, saved: saved_by_title[[cell.date, game.title]]) %>
+              <% end %>
+            </div>
           <% end %>
         </div>
       </div>
@@ -31,9 +33,11 @@
           <% end %>
         </div>
 
+        <% open_games = games.reject { |game| saved_by_title[[day, game.title]] } %>
         <% if games.any? %>
+          <% if open_games.any? %>
           <div class="game-cards" role="group" aria-label="Jogos de <%= day.strftime('%d/%m') %>">
-            <% games.each do |game| %>
+            <% open_games.each do |game| %>
               <form method="post" action="/agenda" class="game-card" data-s="<%= sport_filter(game.sport) %>">
                 <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
                 <input type="hidden" name="day" value="<%= day.iso8601 %>">
@@ -54,6 +58,7 @@
               </form>
             <% end %>
           </div>
+          <% end %>
         <% else %>
           <div class="sport-cards" role="group" aria-label="Esportes de <%= day.strftime('%d/%m') %>">
             <% sports.each do |sport| %>

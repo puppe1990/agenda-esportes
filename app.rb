@@ -97,6 +97,20 @@ module AgendaEsportes
         erb :_saved_item, locals: { item: item }, layout: false
       end
 
+      def cal_event(game, day:, saved: nil)
+        erb :_cal_event, locals: { game: game, day: day, saved: saved }, layout: false
+      end
+
+      def games_by_day
+        TvGrid::ALL.group_by { |game| game.starts_at.to_date }
+      end
+
+      def saved_lookup
+        store.all.each_with_object({}) do |item, hash|
+          hash[[item.starts_on, item.title]] = item
+        end
+      end
+
       def fill_saved_broadcasts
         store.all.each do |item|
           next unless item.kicks_at.to_s.strip.empty?
@@ -130,7 +144,9 @@ module AgendaEsportes
         on_day: store.items_on(day),
         games: TvGrid.on(day),
         grid: MonthGrid.new(year: day.year, month: day.month, marked: marked),
-        sports: SportsCatalog::ALL
+        sports: SportsCatalog::ALL,
+        month_games: games_by_day,
+        saved_by_title: saved_lookup
       }
     end
 

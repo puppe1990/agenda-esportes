@@ -67,7 +67,7 @@ body{
 }
 .skip{position:absolute;left:-9999px}
 .skip:focus{left:16px;top:16px;z-index:30;background:var(--bg);color:var(--fg);padding:10px 14px}
-.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 22px}
+.wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:0 22px}
 .narrow{max-width:68ch}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -82,7 +82,7 @@ a{color:inherit}
   border-bottom:1px solid #243022;
 }
 .bar-inner{
-  max-width:1080px;margin:0 auto;padding:0 22px;
+  max-width:1280px;margin:0 auto;padding:0 22px;
   display:flex;flex-wrap:nowrap;align-items:center;gap:8px 4px;
   overflow-x:auto;-webkit-overflow-scrolling:touch;
 }
@@ -118,7 +118,11 @@ body:has(#f-auto:checked) .ev:not([data-s=auto]),
 body:has(#f-fut:checked) .game-card:not([data-s=fut]),
 body:has(#f-nfl:checked) .game-card:not([data-s=nfl]),
 body:has(#f-nba:checked) .game-card:not([data-s=nba]),
-body:has(#f-auto:checked) .game-card:not([data-s=auto]){display:none}
+body:has(#f-auto:checked) .game-card:not([data-s=auto]),
+body:has(#f-fut:checked) .cal-event:not([data-s=fut]),
+body:has(#f-nfl:checked) .cal-event:not([data-s=nfl]),
+body:has(#f-nba:checked) .cal-event:not([data-s=nba]),
+body:has(#f-auto:checked) .cal-event:not([data-s=auto]){display:none}
 body:has(#f-fut:checked) .blk:not(.blk-fut),
 body:has(#f-nfl:checked) .blk:not(.blk-nfl),
 body:has(#f-nba:checked) .blk:not(.blk-nba),
@@ -254,38 +258,120 @@ h2{font-size:clamp(1.8rem,4vw,2.8rem);margin-bottom:16px}
   display:grid;
   gap:28px;
   grid-template-columns:1fr;
-  margin-top:28px;
+  margin-top:16px;
   align-items:start;
 }
-@media (min-width:880px){
-  .agenda-grid{grid-template-columns:minmax(16rem,20rem) 1fr}
+@media (min-width:960px){
+  .agenda-grid{grid-template-columns:minmax(0,1fr) minmax(18rem,24rem)}
 }
 .cal{
   display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:4px;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:3px;
 }
-.cal span,.cal a{
+.cal-dow{
   font-family:var(--mono);
   font-size:11px;
   letter-spacing:.06em;
   text-transform:uppercase;
   text-align:center;
-  text-decoration:none;
-  padding:8px 0;
   color:var(--muted);
+  padding:6px 0;
 }
-.cal a{
-  color:var(--fg);
+.cal-cell{
+  min-height:7.2rem;
+  max-height:11.2rem;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:4px 4px 6px;
   border:1px solid var(--line);
   background:var(--panel);
 }
-.cal a.is-out{opacity:.35}
-.cal a.is-marked{outline:1px solid var(--fg);outline-offset:-1px}
-.cal a.is-on{
+.cal-cell.is-out{opacity:.4}
+.cal-cell.is-marked{outline:1px solid var(--fg);outline-offset:-1px}
+.cal-cell.is-on{
   background:var(--fg);
   color:var(--bg);
   border-color:var(--fg);
+  max-height:none;
+}
+.cal-num{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  text-decoration:none;
+  color:inherit;
+  align-self:flex-start;
+  padding:1px 3px;
+  line-height:1.3;
+}
+.cal-event{margin:0}
+.cal-event button,
+a.cal-event{
+  display:flex;
+  align-items:baseline;
+  gap:4px;
+  width:100%;
+  padding:2px 5px;
+  text-align:left;
+  text-decoration:none;
+  cursor:pointer;
+  border:0;
+  background:rgba(16,22,15,.08);
+  color:inherit;
+  font-family:var(--sans);
+  font-size:11px;
+  line-height:1.25;
+  border-radius:2px;
+}
+.cal-cell.is-on .cal-event button,
+.cal-cell.is-on a.cal-event{
+  background:rgba(236,232,214,.2);
+}
+.cal-event button:hover,
+.cal-event button:focus-visible,
+a.cal-event:hover,
+a.cal-event:focus-visible{
+  background:var(--fg);
+  color:var(--bg);
+}
+.cal-cell.is-on .cal-event button:hover,
+.cal-cell.is-on .cal-event button:focus-visible,
+.cal-cell.is-on a.cal-event:hover,
+.cal-cell.is-on a.cal-event:focus-visible{
+  background:var(--bg);
+  color:var(--fg);
+}
+a.cal-event.is-saved{
+  background:var(--accent);
+  color:var(--ink);
+}
+.cal-cell.is-on a.cal-event.is-saved{
+  background:var(--accent);
+  color:var(--ink);
+}
+.cal-event-clock{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:.04em;
+  flex:0 0 auto;
+  opacity:.75;
+}
+.cal-event-title{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width:0;
+}
+@media (max-width:699px){
+  .cal-cell,
+  .cal-cell.is-on{min-height:4.6rem;max-height:7.4rem}
+  .cal-event-clock{display:none}
+  .cal-event button,
+  a.cal-event{font-size:10px;padding:2px 4px}
 }
 .sport-cards{
   display:grid;

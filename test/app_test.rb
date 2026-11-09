@@ -404,6 +404,52 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'value="delete"'
   end
 
+  def test_home_month_grid_shows_games_from_other_days_as_chips
+    get "/?dia=2026-11-08"
+
+    assert_includes last_response.body, 'class="cal-event"'
+    assert_includes last_response.body, "Bills x Vikings"
+    assert_match(
+      %r{class="cal-event"[^>]*data-s="nfl"[\s\S]*?name="day" value="2026-11-09"[\s\S]*?name="title" value="Bills x Vikings"},
+      last_response.body
+    )
+    refute_includes last_response.body, "<select"
+    refute_includes last_response.body, "Colocar na agenda"
+  end
+
+  def test_saved_tv_game_becomes_a_saved_chip_on_the_calendar
+    item = AgendaEsportes::App.store.add(
+      sport: "futebol",
+      starts_at: Date.new(2026, 11, 8),
+      title: "Vasco x Palmeiras",
+      kicks_at: "17h"
+    )
+
+    get "/?dia=2026-11-08"
+
+    assert_match(
+      %r{<a class="cal-event is-saved" data-s="fut" href="/agenda/#{item.id}">},
+      last_response.body
+    )
+    cal_forms = last_response.body.scan(%r{<form method="post" action="/agenda" class="cal-event".*?</form>}m)
+    refute cal_forms.any? { |form| form.include?('value="Vasco x Palmeiras"') }
+  end
+
+  def test_day_cards_skip_games_already_on_the_agenda
+    AgendaEsportes::App.store.add(
+      sport: "futebol",
+      starts_at: Date.new(2026, 11, 8),
+      title: "Vasco x Palmeiras",
+      kicks_at: "17h"
+    )
+
+    get "/?dia=2026-11-08"
+
+    game_cards = last_response.body.scan(%r{<form method="post" action="/agenda" class="game-card".*?</form>}m)
+    refute game_cards.any? { |form| form.include?('value="Vasco x Palmeiras"') }
+    assert game_cards.any? { |form| form.include?('value="Crystal Palace x Liverpool"') }
+  end
+
   def csrf_token
     get "/"
     last_response.body[/name="authenticity_token"\s+value="([^"]+)"/, 1] ||

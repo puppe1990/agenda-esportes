@@ -1,6 +1,6 @@
 # Agenda de esportes
 
-Calendário, cards dos jogos (futebol, NFL, NBA e automobilismo) e agenda pessoal em SQLite. CRUD em `/agenda`.
+Calendário tipo agenda: os jogos da TV aparecem no dia, clica no confronto e grava na agenda pessoal (SQLite). CRUD em `/agenda`. Futebol, NFL, NBA e automobilismo.
 
 Host: https://agenda-esportes.sites.gestaobem.com  
 Repo: [puppe1990/agenda-esportes](https://github.com/puppe1990/agenda-esportes)
