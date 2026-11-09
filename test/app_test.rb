@@ -72,7 +72,7 @@ class AppTest < Minitest::Test
   end
 
   def test_home_renders_sport_cards_when_the_day_has_no_tv_games
-    get "/?dia=2026-11-11"
+    get "/?dia=2026-11-17"
 
     assert_includes last_response.body, 'class="sport-card"'
     assert_includes last_response.body, 'value="automobilismo"'

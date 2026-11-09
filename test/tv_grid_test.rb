@@ -49,7 +49,7 @@ class TvGridTest < Minitest::Test
   end
 
   def test_empty_day_has_no_games
-    assert_empty TvGrid.on(Date.new(2026, 11, 11))
+    assert_empty TvGrid.on(Date.new(2026, 11, 17))
   end
 
   def test_catalog_never_includes_corrida
@@ -61,9 +61,101 @@ class TvGridTest < Minitest::Test
   end
 
   def test_tuesday_nba_is_sorted_by_tipoff
-    titles = TvGrid.on(Date.new(2026, 11, 10)).map(&:title)
+    tuesday = TvGrid.on(Date.new(2026, 11, 10))
+    titles = tuesday.map(&:title)
 
     assert_equal ["Bucks x Knicks", "Celtics x 76ers"], titles
+    assert_equal "21h30", tuesday.first.clock
+    celtics = tuesday.find { |game| game.title == "Celtics x 76ers" }
+    assert_equal "22h", celtics.clock
+    assert_includes celtics.where, "Prime"
+  end
+
+  def test_wednesday_nba_opens_with_thunder_at_one_am
+    wednesday = TvGrid.on(Date.new(2026, 11, 11))
+
+    assert_equal [
+      "Thunder x Blazers",
+      "Cavaliers x Knicks",
+      "Lakers x Bucks",
+      "Warriors x Rockets"
+    ], wednesday.map(&:title)
+    thunder = wednesday.first
+    assert_equal "1h", thunder.clock
+    assert_includes thunder.where, "Prime"
+    cavs = wednesday.find { |game| game.title == "Cavaliers x Knicks" }
+    assert_equal "21h", cavs.clock
+    assert_includes cavs.where, "ESPN"
+  end
+
+  def test_thursday_has_prime_nba_and_thursday_night_football
+    thursday = TvGrid.on(Date.new(2026, 11, 12))
+
+    assert_equal [
+      "Raptors x 76ers",
+      "Mavericks x Timberwolves",
+      "Commanders x Giants"
+    ], thursday.map(&:title)
+    tnf = thursday.find { |game| game.title == "Commanders x Giants" }
+    assert_equal "nfl", tnf.sport
+    assert_equal "22h15", tnf.clock
+    assert_includes tnf.where, "sportv"
+    raptors = thursday.first
+    assert_equal "21h", raptors.clock
+    assert_includes raptors.where, "Prime"
+  end
+
+  def test_friday_prime_is_knicks_pacers_then_warriors_spurs
+    friday = TvGrid.on(Date.new(2026, 11, 13))
+
+    assert_equal ["Knicks x Pacers", "Warriors x Spurs"], friday.map(&:title)
+    knicks = friday.first
+    assert_equal "21h", knicks.clock
+    assert_includes knicks.where, "Prime"
+    refute_includes friday.map(&:title), "Knicks x Lakers"
+  end
+
+  def test_saturday_serie_b_finale_then_pistons_heat
+    saturday = TvGrid.on(Date.new(2026, 11, 14))
+
+    assert_equal [
+      "Criciúma x Novorizontino",
+      "Fortaleza x Vila Nova",
+      "Juventude x Botafogo-SP",
+      "Pistons x Heat"
+    ], saturday.map(&:title)
+    criciuma = saturday.first
+    assert_equal "futebol", criciuma.sport
+    assert_equal "16h30", criciuma.clock
+    assert_includes criciuma.where, "Disney+"
+    assert_match(/t[íi]tulo/i, criciuma.note)
+    heat = saturday.last
+    assert_equal "22h", heat.clock
+    assert_includes heat.where, "ESPN"
+  end
+
+  def test_sunday_week_ten_runs_munich_to_sunday_night
+    sunday = TvGrid.on(Date.new(2026, 11, 15))
+
+    assert_equal [
+      "Patriots x Lions",
+      "Vikings x Packers",
+      "Bills x Jets",
+      "Lakers x Suns",
+      "49ers x Cowboys",
+      "Mavericks x Celtics",
+      "Steelers x Bengals"
+    ], sunday.map(&:title)
+    munich = sunday.first
+    assert_equal "11h30", munich.clock
+    assert_match(/Munique|Allianz/i, munich.note)
+    assert_includes munich.where, "sportv"
+    snf = sunday.last
+    assert_equal "22h20", snf.clock
+    assert_includes snf.where, "sportv"
+    mavs = sunday.find { |game| game.title == "Mavericks x Celtics" }
+    assert_equal "20h", mavs.clock
+    assert_includes mavs.where, "Prime"
   end
 
   def test_same_kickoff_keeps_editorial_order
