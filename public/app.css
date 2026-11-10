@@ -398,10 +398,9 @@ body:has(#f-auto:checked) .sport-pill[for=f-auto] .sport-pill-count{
   background:rgba(11,18,16,.16);
   color:inherit;
 }
-body:has(#v-lista:checked) .cal-pane{display:none}
+.cal-pane{display:none}
+body:has(#v-grade:checked) .cal-pane{display:block}
 body:has(#v-grade:checked) .list-pane{display:none}
-body:has(#v-lista:checked) .agenda-grid,
-body:has(#v-grade:checked) .agenda-grid{grid-template-columns:1fr}
 @media (max-width:899px){
   .week-toolbar{
     display:grid;
@@ -432,9 +431,6 @@ body:has(#v-grade:checked) .agenda-grid{grid-template-columns:1fr}
   align-items:start;
 }
 .agenda-grid > *{min-width:0}
-@media (min-width:960px){
-  .agenda-grid{grid-template-columns:minmax(0,1fr) minmax(18rem,24rem)}
-}
 .cal{
   display:grid;
   grid-template-columns:repeat(7,minmax(0,1fr));
@@ -485,6 +481,7 @@ body:has(#v-grade:checked) .agenda-grid{grid-template-columns:1fr}
 .cal-event{margin:0;min-width:0;flex:0 0 auto}
 .cal-event button,
 a.cal-event{
+  appearance:none;
   display:flex;
   flex-wrap:nowrap;
   align-items:baseline;

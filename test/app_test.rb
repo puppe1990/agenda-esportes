@@ -603,6 +603,36 @@ class AppTest < Minitest::Test
     refute_includes last_response.body, 'data-theme="paper"'
   end
 
+  def test_home_stylesheet_is_cache_busted
+    get "/"
+
+    assert_match(%r{href="/app\.css\?v=\d+"}, last_response.body)
+  end
+
+  def test_home_nav_does_not_repeat_sport_filters
+    get "/?dia=8&mes=11&ano=2026"
+
+    refute_match(%r{<nav class="bar"[^>]*>[\s\S]*?<label for="f-all">Tudo</label>}, last_response.body)
+    assert_match(%r{<label for="f-all" class="sport-pill">}, last_response.body)
+    get "/agenda"
+    assert_match(%r{<nav class="bar"[^>]*>[\s\S]*?<label for="f-all">Tudo</label>}, last_response.body)
+  end
+
+  def test_css_hides_the_month_grid_until_grade_is_on
+    css = File.read(File.expand_path("../public/app.css", __dir__))
+
+    refute_match(/\.agenda-grid\{grid-template-columns:minmax/, css)
+    assert_match(/\.cal-pane\{display:none\}/, css)
+    assert_match(/body:has\(#v-grade:checked\) \.cal-pane\{display:block\}/, css)
+    assert_match(/body:has\(#v-grade:checked\) \.list-pane\{display:none\}/, css)
+  end
+
+  def test_calendar_chips_drop_ua_button_chrome
+    css = File.read(File.expand_path("../public/app.css", __dir__))
+
+    assert_match(/\.cal-event button(?:,\s*a\.cal-event)?\{[^}]*appearance:\s*none/m, css)
+  end
+
   def csrf_token
     get "/"
     last_response.body[/name="authenticity_token"\s+value="([^"]+)"/, 1] ||

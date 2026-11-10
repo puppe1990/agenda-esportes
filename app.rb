@@ -46,9 +46,20 @@ module AgendaEsportes
       end
     end
 
+    before do
+      @show_bar_filters = true
+    end
+
     helpers do
       def store
         self.class.store
+      end
+
+      def asset_path(file)
+        relative = file.delete_prefix("/")
+        path = File.join(settings.public_folder, relative)
+        stamp = File.exist?(path) ? File.mtime(path).to_i : 0
+        "/#{relative}?v=#{stamp}"
       end
 
       def selected_day
@@ -194,6 +205,7 @@ module AgendaEsportes
     end
 
     get "/" do
+      @show_bar_filters = false
       day = selected_day
       marked = store.days_with_items(day.year, day.month)
       games = TvGrid.on(day)

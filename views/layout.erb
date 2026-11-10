@@ -15,7 +15,7 @@
 <link rel="preload" href="/fonts/instrument-serif-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Crect x='6' y='8' width='20' height='16' rx='2' fill='none' stroke='%236eff94' stroke-width='2'/%3E%3Cpath d='M10 16h4M18 16h4' stroke='%236eff94' stroke-width='2' stroke-linecap='square'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="<%= asset_path("app.css") %>">
 </head>
 <body>
 <a class="skip" href="#conteudo">Pular para o conteúdo</a>
@@ -31,11 +31,13 @@
   <div class="bar-inner">
     <a class="brand" href="/">Agenda · BRT</a>
     <a class="mine-link" href="/agenda">Minha agenda</a>
+    <% if @show_bar_filters %>
     <label for="f-all">Tudo</label>
     <label for="f-fut">Futebol</label>
     <label for="f-nfl">NFL</label>
     <label for="f-nba">NBA</label>
     <label for="f-auto">Automobilismo</label>
+    <% end %>
   </div>
 </nav>
 
