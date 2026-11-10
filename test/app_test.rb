@@ -404,6 +404,15 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'value="delete"'
   end
 
+  def test_selected_calendar_cell_keeps_a_height_cap
+    css = File.read(File.expand_path("../public/app.css", __dir__))
+    rules = css.scan(/\.cal-cell\.is-on\{[^}]+\}/)
+    refute_empty rules
+    rules.each do |rule|
+      refute_match(/max-height:\s*none/, rule)
+    end
+  end
+
   def test_home_month_grid_shows_games_from_other_days_as_chips
     get "/?dia=2026-11-08"
 
@@ -448,6 +457,98 @@ class AppTest < Minitest::Test
     game_cards = last_response.body.scan(%r{<form method="post" action="/agenda" class="game-card".*?</form>}m)
     refute game_cards.any? { |form| form.include?('value="Vasco x Palmeiras"') }
     assert game_cards.any? { |form| form.include?('value="Crystal Palace x Liverpool"') }
+  end
+
+  def test_home_opens_the_day_from_dia_mes_ano_query
+    get "/?dia=8&mes=11&ano=2026"
+
+    assert last_response.ok?
+    assert_includes last_response.body, 'aria-label="Jogos de 08/11"'
+    game_cards = last_response.body.scan(%r{<form method="post" action="/agenda" class="game-card".*?</form>}m)
+    assert game_cards.any? { |form| form.include?('value="Vasco x Palmeiras"') }
+    refute game_cards.any? { |form| form.include?('value="Bills x Vikings"') }
+  end
+
+  def test_calendar_day_links_use_dia_mes_ano
+    get "/?dia=8&mes=11&ano=2026"
+
+    assert_match(%r{class="cal-num" href="/\?dia=9&(?:amp;)?mes=11&(?:amp;)?ano=2026"}, last_response.body)
+    refute_match(%r{class="cal-num" href="/\?dia=2026-11-}, last_response.body)
+  end
+
+  def test_post_redirects_to_dia_mes_ano
+    post "/agenda", {
+      sport: "nba",
+      day: "2026-11-10",
+      title: Faker::Team.name,
+      authenticity_token: csrf_token
+    }
+
+    assert_equal 302, last_response.status
+    assert_match(%r{/\?dia=10&mes=11&ano=2026\z}, last_response.headers["Location"])
+  end
+
+  def test_show_links_back_to_the_day_with_dia_mes_ano
+    item = AgendaEsportes::App.store.add(
+      sport: "automobilismo",
+      starts_at: Date.new(2026, 11, 21),
+      title: Faker::Vehicle.make_and_model
+    )
+
+    get "/agenda/#{item.id}"
+
+    assert_match(%r{href="/\?dia=21&(?:amp;)?mes=11&(?:amp;)?ano=2026"}, last_response.body)
+    refute_includes last_response.body, 'href="/?dia=2026-11-21"'
+  end
+
+  def test_agenda_index_filters_by_dia_mes_ano
+    day_item = AgendaEsportes::App.store.add(
+      sport: "futebol",
+      starts_at: Date.new(2026, 11, 8),
+      title: "Só no dia 8"
+    )
+    AgendaEsportes::App.store.add(
+      sport: "nfl",
+      starts_at: Date.new(2026, 11, 9),
+      title: "Segunda da NFL"
+    )
+    AgendaEsportes::App.store.add(
+      sport: "nba",
+      starts_at: Date.new(2026, 12, 1),
+      title: "Dezembro"
+    )
+    AgendaEsportes::App.store.add(
+      sport: "automobilismo",
+      starts_at: Date.new(2025, 11, 8),
+      title: "Ano passado"
+    )
+
+    get "/agenda?dia=8&mes=11&ano=2026"
+
+    assert last_response.ok?
+    assert_includes last_response.body, day_item.title
+    refute_includes last_response.body, "Segunda da NFL"
+    refute_includes last_response.body, "Dezembro"
+    refute_includes last_response.body, "Ano passado"
+  end
+
+  def test_agenda_index_filters_by_mes_and_ano
+    AgendaEsportes::App.store.add(sport: "futebol", starts_at: Date.new(2026, 11, 8), title: "Novembro A")
+    AgendaEsportes::App.store.add(sport: "nba", starts_at: Date.new(2026, 11, 20), title: "Novembro B")
+    AgendaEsportes::App.store.add(sport: "nfl", starts_at: Date.new(2026, 12, 1), title: "Dezembro")
+
+    get "/agenda?mes=11&ano=2026"
+
+    assert last_response.ok?
+    assert_includes last_response.body, "Novembro A"
+    assert_includes last_response.body, "Novembro B"
+    refute_includes last_response.body, "Dezembro"
+  end
+
+  def test_invalid_dia_mes_ano_is_400
+    get "/?dia=31&mes=11&ano=2026"
+
+    assert_equal 400, last_response.status
   end
 
   def csrf_token

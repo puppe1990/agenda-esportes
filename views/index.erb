@@ -13,7 +13,7 @@
           <% end %>
           <% grid.cells.each do |cell| %>
             <div class="cal-cell<%= ' is-out' unless cell.in_month %><%= ' is-marked' if cell.marked %><%= ' is-on' if cell.date == day %>">
-              <a class="cal-num" href="/?dia=<%= cell.date.iso8601 %>"><%= cell.date.day %></a>
+              <a class="cal-num" href="<%= day_path(cell.date) %>"><%= cell.date.day %></a>
               <% (month_games[cell.date] || []).each do |game| %>
                 <%= cal_event(game, day: cell.date, saved: saved_by_title[[cell.date, game.title]]) %>
               <% end %>

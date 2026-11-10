@@ -51,10 +51,50 @@ module AgendaEsportes
       end
 
       def selected_day
+        parsed = parse_query_date
+        return parsed if parsed
+
         raw = params[:dia].to_s
         return Date.iso8601(raw) if raw.match?(/\A\d{4}-\d{2}-\d{2}\z/)
 
         Date.today
+      end
+
+      def day_path(date)
+        "/?dia=#{date.day}&mes=#{date.month}&ano=#{date.year}"
+      end
+
+      def parse_query_date
+        year = params[:ano].to_s
+        month = params[:mes].to_s
+        day = params[:dia].to_s
+        return nil unless year.match?(/\A\d{4}\z/) && month.match?(/\A\d{1,2}\z/) && day.match?(/\A\d{1,2}\z/)
+
+        y = year.to_i
+        m = month.to_i
+        d = day.to_i
+        halt 400, "dia inválido" unless Date.valid_date?(y, m, d)
+
+        Date.new(y, m, d)
+      end
+
+      def scoped_items
+        if (day = parse_query_date)
+          return store.items_on(day)
+        end
+
+        year = params[:ano].to_s
+        month = params[:mes].to_s
+        items = store.all
+        if year.match?(/\A\d{4}\z/) && month.match?(/\A\d{1,2}\z/)
+          y = year.to_i
+          m = month.to_i
+          return items.select { |item| item.starts_on.year == y && item.starts_on.month == m }
+        end
+
+        return items.select { |item| item.starts_on.year == year.to_i } if year.match?(/\A\d{4}\z/)
+
+        items
       end
 
       def csrf_token
@@ -151,7 +191,7 @@ module AgendaEsportes
     end
 
     get "/agenda" do
-      erb :"agenda/index", locals: { items: store.all }
+      erb :"agenda/index", locals: { items: scoped_items }
     end
 
     get "/agenda/:id/edit" do
@@ -172,7 +212,7 @@ module AgendaEsportes
         note: params[:note],
         watch_on: params[:watch]
       )
-      redirect "/?dia=#{day.iso8601}", 302
+      redirect day_path(day), 302
     rescue SportsCatalog::UnknownSport
       halt 422, "esporte desconhecido"
     end

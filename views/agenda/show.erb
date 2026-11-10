@@ -11,7 +11,7 @@
     <% end %>
     <%= item_actions(item) %>
     <p class="note">
-      <a href="/?dia=<%= item.starts_on.iso8601 %>">ver no dia</a>
+      <a href="<%= day_path(item.starts_on) %>">ver no dia</a>
       ·
       <a href="/agenda">toda a agenda</a>
     </p>
