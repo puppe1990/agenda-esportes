@@ -9,6 +9,7 @@ require "fileutils"
 require_relative "lib/sports_catalog"
 require_relative "lib/agenda_store"
 require_relative "lib/month_grid"
+require_relative "lib/week_strip"
 require_relative "lib/tv_grid"
 
 module AgendaEsportes
@@ -145,6 +146,23 @@ module AgendaEsportes
         TvGrid::ALL.group_by { |game| game.starts_at.to_date }
       end
 
+      def week_strip_for(day)
+        monday = day - (day.cwday - 1)
+        counts = (0..6).each_with_object({}) do |offset, hash|
+          date = monday + offset
+          hash[date] = TvGrid.on(date).size
+        end
+        WeekStrip.new(day: day, counts: counts)
+      end
+
+      def sport_counts(games)
+        games.each_with_object(Hash.new(0)) { |game, hash| hash[game.sport] += 1 }
+      end
+
+      def week_count_label(cell)
+        cell.selected ? "#{cell.count} jogos" : "#{cell.count} jgs"
+      end
+
       def saved_lookup
         store.all.each_with_object({}) do |item, hash|
           hash[[item.starts_on, item.title]] = item
@@ -178,12 +196,15 @@ module AgendaEsportes
     get "/" do
       day = selected_day
       marked = store.days_with_items(day.year, day.month)
+      games = TvGrid.on(day)
       erb :index, locals: {
         day: day,
         items: store.all,
         on_day: store.items_on(day),
-        games: TvGrid.on(day),
+        games: games,
         grid: MonthGrid.new(year: day.year, month: day.month, marked: marked),
+        week: week_strip_for(day),
+        day_sport_counts: sport_counts(games),
         sports: SportsCatalog::ALL,
         month_games: games_by_day,
         saved_by_title: saved_lookup
