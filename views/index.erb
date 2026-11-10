@@ -1,8 +1,48 @@
 <main id="conteudo">
-<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto app-page" id="agendinha">
+<section class="blk blk-fut blk-nfl blk-nba blk-auto app-page" id="agendinha">
+  <input class="vista" type="radio" name="vista" id="v-lista" checked>
+  <input class="vista" type="radio" name="vista" id="v-grade">
   <div class="wrap">
+    <div class="week-board">
+      <div class="week-toolbar">
+        <a class="week-shift" href="<%= day_path(week.prev_week) %>" aria-label="Semana anterior">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.2 2.4 4.6 8l5.6 5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="vh">Semana anterior</span>
+        </a>
+        <div class="week-strip">
+          <% week.days.each do |cell| %>
+            <a class="week-day<%= ' is-on' if cell.selected %><%= ' is-today' if cell.today %><%= ' is-sat' if cell.saturday %>" href="<%= day_path(cell.date) %>">
+              <span class="week-dow"><%= cell.label %></span>
+              <span class="week-num"><%= cell.date.day %></span>
+              <span class="week-count"><% if cell.today %><span class="week-live" aria-hidden="true"></span><% end %><%= week_count_label(cell) %></span>
+            </a>
+          <% end %>
+        </div>
+        <a class="week-shift" href="<%= day_path(week.next_week) %>" aria-label="Próxima semana">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.8 2.4 11.4 8l-5.6 5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="vh">Próxima semana</span>
+        </a>
+        <div class="view-toggle" role="group" aria-label="Vista">
+          <label for="v-lista">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Lista
+          </label>
+          <label for="v-grade">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".6" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".6" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".6" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="4.5" height="4.5" rx=".6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            Grade
+          </label>
+        </div>
+      </div>
+      <div class="sport-pills" role="group" aria-label="Filtro por esporte">
+        <label for="f-all" class="sport-pill">Todos <span class="sport-pill-count"><%= games.size %></span></label>
+        <% sports.each do |sport| %>
+          <label for="f-<%= sport_filter(sport.slug) %>" class="sport-pill"><%= sport.name %> <span class="sport-pill-count"><%= day_sport_counts[sport.slug] %></span></label>
+        <% end %>
+      </div>
+    </div>
+
     <div class="agenda-grid">
-      <div>
+      <div class="cal-pane">
         <div class="day-head">
           <h3><%= month_title(day) %></h3>
           <span><%= day.strftime("%d/%m") %></span>
@@ -22,16 +62,14 @@
         </div>
       </div>
 
-      <div>
+      <div class="list-pane">
+        <% if on_day.any? %>
         <div class="mine">
-          <% if on_day.empty? %>
-            <p class="note">Nada neste dia.</p>
-          <% else %>
-            <% on_day.each do |item| %>
-              <%= saved_item(item) %>
-            <% end %>
+          <% on_day.each do |item| %>
+            <%= saved_item(item) %>
           <% end %>
         </div>
+        <% end %>
 
         <% open_games = games.reject { |game| saved_by_title[[day, game.title]] } %>
         <% if games.any? %>

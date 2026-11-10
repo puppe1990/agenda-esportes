@@ -1,5 +1,5 @@
 <main id="conteudo">
-<section data-theme="paper" class="blk blk-fut blk-nfl blk-nba blk-auto app-page">
+<section class="blk blk-fut blk-nfl blk-nba blk-auto app-page">
   <div class="wrap">
     <p class="kicker"><%= sport_name(item.sport) %> · <%= item.starts_on.strftime("%d/%m") %><% unless item.kicks_at.to_s.strip.empty? %> · <%= item.kicks_at %><% end %></p>
     <h1><%= item.title %></h1>

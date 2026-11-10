@@ -551,6 +551,58 @@ class AppTest < Minitest::Test
     assert_equal 400, last_response.status
   end
 
+  def test_home_week_strip_links_the_monday_week_with_dia_mes_ano
+    get "/?dia=8&mes=11&ano=2026"
+
+    assert_match(%r{class="week-strip"}, last_response.body)
+    assert_match(%r{class="week-day[^"]*" href="/\?dia=2&(?:amp;)?mes=11&(?:amp;)?ano=2026"}, last_response.body)
+    assert_match(%r{class="week-day is-on[^"]*" href="/\?dia=8&(?:amp;)?mes=11&(?:amp;)?ano=2026"}, last_response.body)
+    assert_match(%r{18 jogos}i, last_response.body)
+    assert_match(%r{href="/\?dia=1&(?:amp;)?mes=11&(?:amp;)?ano=2026"[^>]*>[\s\S]*?semana anterior}i, last_response.body)
+    assert_match(%r{href="/\?dia=15&(?:amp;)?mes=11&(?:amp;)?ano=2026"[^>]*>[\s\S]*?próxima semana}i, last_response.body)
+  end
+
+  def test_home_sport_pills_count_games_on_the_selected_day
+    get "/?dia=8&mes=11&ano=2026"
+
+    assert_match(%r{<label for="f-all" class="sport-pill">[\s\S]*?Todos[\s\S]*?<span class="sport-pill-count">18</span>}i, last_response.body)
+    assert_match(%r{<label for="f-fut" class="sport-pill">[\s\S]*?Futebol[\s\S]*?<span class="sport-pill-count">7</span>}i, last_response.body)
+    assert_match(%r{<label for="f-nfl" class="sport-pill">[\s\S]*?NFL[\s\S]*?<span class="sport-pill-count">6</span>}i, last_response.body)
+    assert_match(%r{<label for="f-nba" class="sport-pill">[\s\S]*?NBA[\s\S]*?<span class="sport-pill-count">4</span>}i, last_response.body)
+    assert_match(%r{<label for="f-auto" class="sport-pill">[\s\S]*?Automobilismo[\s\S]*?<span class="sport-pill-count">1</span>}i, last_response.body)
+    refute_match(/tênis|tenis|esports|e-sports/i, last_response.body)
+  end
+
+  def test_home_lista_is_the_default_view_and_grade_stays_available
+    get "/?dia=8&mes=11&ano=2026"
+
+    assert_match(%r{id="v-lista"[^>]*checked}, last_response.body)
+    assert_includes last_response.body, 'id="v-grade"'
+    assert_includes last_response.body, 'for="v-lista"'
+    assert_includes last_response.body, 'for="v-grade"'
+    assert_includes last_response.body, 'class="cal"'
+    assert_includes last_response.body, 'class="game-card"'
+  end
+
+  def test_week_strip_labels_today_as_hoje
+    today = Date.today
+    get "/?dia=#{today.day}&mes=#{today.month}&ano=#{today.year}"
+
+    assert last_response.ok?
+    assert_match(%r{class="week-day is-on[^"]*"[^>]*>[\s\S]*?hoje}i, last_response.body)
+  end
+
+  def test_system_uses_dark_mint_tokens
+    css = File.read(File.expand_path("../public/app.css", __dir__))
+
+    assert_match(/--accent:\s*#6eff94/i, css)
+    refute_match(/--accent:\s*#c8f542/, css)
+    get "/?dia=8&mes=11&ano=2026"
+    refute_includes last_response.body, 'data-theme="paper"'
+    get "/agenda"
+    refute_includes last_response.body, 'data-theme="paper"'
+  end
+
   def csrf_token
     get "/"
     last_response.body[/name="authenticity_token"\s+value="([^"]+)"/, 1] ||
