@@ -26,6 +26,7 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 | `lib/week_strip.rb` | Faixa segunda–domingo |
 | `app.rb` | Rotas Sinatra |
 | `views/` | Layout + agendinha + CRUD (`_cal_event.erb` = chip do mês) |
+| `public/og.html` | Card OG 1200×630 (faixa mint). Rasteriza com `bash scripts/render-og.sh` → `public/og.png` |
 | `test/` | Minitest + Faker + rack-test |
 
 Não virar Rails. Não reintroduzir corrida.

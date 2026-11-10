@@ -19,6 +19,12 @@ bundle exec puma -C config/puma.rb   # PORT=8791
 
 O catálogo de esportes **não** inclui corrida. O slug é `automobilismo`.
 
+Card Open Graph: `public/og.html` (dark mint, faixa da semana) rasteriza em `public/og.png` 1200×630.
+
+```bash
+bash scripts/render-og.sh
+```
+
 ## Deploy
 
 Cleat runtime `rails` (instala Ruby via mise), app `agenda-esportes`. O systemd esconde `/home`, então o deploy copia o Ruby do mise para `/opt/agenda-esportes/ruby` e o processo sobe com `bash bin/boot`.
