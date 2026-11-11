@@ -28,8 +28,7 @@ class GeSync
   end
 
   def run
-    from = @now.to_date
-    to = from + 6
+    from, to = tv_window
     events = []
     succeeded = []
     errors = []
@@ -52,6 +51,14 @@ class GeSync
   end
 
   private
+
+  # Week strip is Monday–Sunday. Starting at today left Mon/Tue of the
+  # current week with 0 jogos and sport-name cards instead of matchups.
+  def tv_window
+    today = @now.to_date
+    monday = today - (today.cwday - 1)
+    [monday, today + 6]
+  end
 
   def fetch_date(date)
     GeParser.parse(@client.championships_agenda(date)) +

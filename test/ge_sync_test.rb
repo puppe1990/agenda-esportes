@@ -16,17 +16,30 @@ class GeSyncTest < Minitest::Test
     FileUtils.remove_entry(@dir) if @dir && File.directory?(@dir)
   end
 
-  def test_fetches_seven_days_of_both_queries_and_upserts
+  def test_fetches_from_monday_of_the_week_through_today_plus_six
     client = recording_client
     result = GeSync.call(store: @store, client: client, now: @now)
 
-    dates = (Date.new(2026, 11, 11)..Date.new(2026, 11, 17)).map(&:iso8601)
+    dates = (Date.new(2026, 11, 9)..Date.new(2026, 11, 17)).map(&:iso8601)
     assert_equal dates, client.futebol_dates
     assert_equal dates, client.multi_dates
-    assert_equal 2, @store.tv_events_on(Date.new(2026, 11, 11)).size
+    assert_equal 2, @store.tv_events_on(Date.new(2026, 11, 10)).size
     assert_equal "basquete", @store.tv_events_on(Date.new(2026, 11, 11)).find { |row| row[:sport] == "basquete" }[:sport]
     assert result[:ok]
-    assert_equal 14, result[:upserted]
+    assert_equal "2026-11-09", result[:from]
+    assert_equal "2026-11-17", result[:to]
+    assert_equal 18, result[:upserted]
+  end
+
+  def test_monday_window_starts_today
+    now = Time.parse("2026-11-09T09:00:00-03:00")
+    client = recording_client
+    result = GeSync.call(store: @store, client: client, now: now)
+
+    dates = (Date.new(2026, 11, 9)..Date.new(2026, 11, 15)).map(&:iso8601)
+    assert_equal dates, client.futebol_dates
+    assert_equal "2026-11-09", result[:from]
+    assert_equal "2026-11-15", result[:to]
   end
 
   def test_prunes_a_game_that_left_the_feed

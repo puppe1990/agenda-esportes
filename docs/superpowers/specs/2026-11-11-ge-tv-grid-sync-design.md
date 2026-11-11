@@ -46,7 +46,7 @@ Hoje o app tem catálogo congelado `futebol | nfl | nba | automobilismo`, pills 
 
 | Tema | Decisão |
 | --- | --- |
-| Janela | Hoje 00:00 BRT até hoje+6 (7 datas). `TZ=America/Sao_Paulo`. |
+| Janela | Segunda da semana atual até hoje+6 BRT. A faixa da semana é segunda–domingo; dias já passados da semana corrente entram no sync. `TZ=America/Sao_Paulo`. |
 | Esportes | Tudo que o GE mandar. Slug = nome do esporte, não o campeonato. |
 | Pills | União dos esportes com ≥1 jogo na janela. Contagem = dia selecionado (pode ser 0). |
 | Persistência | SQLite `tv_events`, upsert por `ge_id`. |
@@ -176,7 +176,7 @@ Em `GET /` e `GET` da Grade (a própria `/`): se `GeSync.stale?` e `RACK_ENV != 
 
 - Pills na home: `Todos` + `SportsCatalog.in_window`. Cada uma `for="f-#{slug}"` e count do dia.
 - Radios `#f-all` e `#f-#{slug}` gerados no layout. CSS de filtro gerado no mesmo ERB (`body:has(#f-basquete:checked) .game-card:not([data-s=basquete]){display:none}` e equivalentes para `.cal-event` / `.ev` / pill ativa). Sem JS.
-- Dia sem jogos: empty state; os `.sport-card` de alta manual listam os esportes da janela (não as quatro fixas).
+- Dia sem jogos: “Sem jogos na TV neste dia.” Sem `.sport-card` (clique nisso gravava só o nome do esporte).
 - Copy OG/meta: “Jogos da TV nos próximos 7 dias.” (sai a lista NFL/NBA).
 - `/agenda` filtros da barra: os mesmos slugs da janela **união** slugs já salvos (pra filtrar item `nba` antigo).
 
