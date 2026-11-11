@@ -1,10 +1,10 @@
 <% if saved %>
-  <a class="cal-event is-saved" data-s="<%= sport_filter(game.sport) %>" href="/agenda/<%= saved.id %>">
+  <a class="cal-event is-saved" data-s="<%= game.sport %>" href="/agenda/<%= saved.id %>">
     <span class="cal-event-clock"><%= game.clock %></span>
     <span class="cal-event-title"><%= game.title %></span>
   </a>
 <% else %>
-  <form method="post" action="/agenda" class="cal-event" data-s="<%= sport_filter(game.sport) %>">
+  <form method="post" action="/agenda" class="cal-event" data-s="<%= game.sport %>">
     <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
     <input type="hidden" name="day" value="<%= day.iso8601 %>">
     <input type="hidden" name="sport" value="<%= game.sport %>">

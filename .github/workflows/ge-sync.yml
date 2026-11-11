@@ -1,0 +1,18 @@
+name: ge-sync
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull the GE window into the live app
+        env:
+          GE_SYNC_TOKEN: ${{ secrets.GE_SYNC_TOKEN }}
+        run: |
+          test -n "$GE_SYNC_TOKEN"
+          curl -fsS -H "Authorization: Bearer ${GE_SYNC_TOKEN}" \
+            "https://agenda-esportes.sites.gestaobem.com/interno/ge-sync"

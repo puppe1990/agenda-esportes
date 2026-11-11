@@ -250,4 +250,117 @@ class AgendaStoreTest < Minitest::Test
     assert_equal "22h15", item.kicks_at
     assert_equal note, item.note
   end
+
+  def test_replace_tv_window_upserts_and_lists_by_day
+    home = Faker::Team.name
+    away = Faker::Team.name
+    title = "#{home} x #{away}"
+    @store.replace_tv_window(
+      [
+        tv_event(ge_id: "358001", sport: "basquete", sport_name: "Basquete", title: title,
+                 starts_at: "2026-11-11T22:00:00-03:00", competition: "NBA")
+      ],
+      from: Date.new(2026, 11, 11),
+      to: Date.new(2026, 11, 17)
+    )
+
+    games = @store.tv_events_on(Date.new(2026, 11, 11))
+    assert_equal 1, games.size
+    assert_equal title, games.first[:title]
+    assert_equal "basquete", games.first[:sport]
+    assert_empty @store.tv_events_on(Date.new(2026, 11, 12))
+  end
+
+  def test_replace_tv_window_prunes_ids_missing_from_the_batch
+    @store.replace_tv_window(
+      [
+        tv_event(ge_id: "1", title: "A x B", starts_at: "2026-11-11T20:00:00-03:00"),
+        tv_event(ge_id: "2", title: "C x D", starts_at: "2026-11-11T21:00:00-03:00")
+      ],
+      from: Date.new(2026, 11, 11),
+      to: Date.new(2026, 11, 17)
+    )
+    @store.replace_tv_window(
+      [tv_event(ge_id: "1", title: "A x B", starts_at: "2026-11-11T20:00:00-03:00")],
+      from: Date.new(2026, 11, 11),
+      to: Date.new(2026, 11, 17)
+    )
+
+    titles = @store.tv_events_on(Date.new(2026, 11, 11)).map { |row| row[:title] }
+    assert_equal ["A x B"], titles
+  end
+
+  def test_replace_tv_window_prunes_events_outside_the_window
+    @store.replace_tv_window(
+      [tv_event(ge_id: "old", title: "Old x Game", starts_at: "2026-11-01T20:00:00-03:00")],
+      from: Date.new(2026, 11, 1),
+      to: Date.new(2026, 11, 7)
+    )
+    @store.replace_tv_window(
+      [tv_event(ge_id: "new", title: "New x Game", starts_at: "2026-11-11T20:00:00-03:00")],
+      from: Date.new(2026, 11, 11),
+      to: Date.new(2026, 11, 17)
+    )
+
+    assert_empty @store.tv_events_on(Date.new(2026, 11, 1))
+    assert_equal ["New x Game"], @store.tv_events_on(Date.new(2026, 11, 11)).map { |row| row[:title] }
+  end
+
+  def test_sports_in_tv_window_lists_distinct_names
+    @store.replace_tv_window(
+      [
+        tv_event(ge_id: "1", sport: "basquete", sport_name: "Basquete", title: "A x B",
+                 starts_at: "2026-11-11T20:00:00-03:00"),
+        tv_event(ge_id: "2", sport: "basquete", sport_name: "Basquete", title: "C x D",
+                 starts_at: "2026-11-12T20:00:00-03:00"),
+        tv_event(ge_id: "3", sport: "volei", sport_name: "Vôlei", title: "E x F",
+                 starts_at: "2026-11-11T19:00:00-03:00")
+      ],
+      from: Date.new(2026, 11, 11),
+      to: Date.new(2026, 11, 17)
+    )
+
+    slugs = @store.sports_in_tv_window.map(&:slug)
+    assert_equal %w[basquete volei], slugs
+    assert_equal "Vôlei", @store.sports_in_tv_window.find { |sport| sport.slug == "volei" }.name
+  end
+
+  def test_records_sync_state
+    now = Time.parse("2026-11-11T09:00:00-03:00")
+    @store.record_sync!(synced_at: now, event_count: 4, error: nil)
+
+    state = @store.sync_state
+    assert_equal now.iso8601, Time.parse(state[:synced_at]).iso8601
+    assert_equal 4, state[:event_count]
+    assert_nil state[:error]
+  end
+
+  def test_find_sport_bang_accepts_a_synced_slug
+    @store.replace_tv_window(
+      [tv_event(ge_id: "1", sport: "basquete", sport_name: "Basquete", title: "A x B",
+                starts_at: "2026-11-11T20:00:00-03:00")],
+      from: Date.new(2026, 11, 11),
+      to: Date.new(2026, 11, 17)
+    )
+
+    sport = @store.find_sport!("basquete")
+    assert_equal "basquete", sport.slug
+    assert_equal "Basquete", sport.name
+  end
+
+  private
+
+  def tv_event(ge_id:, title:, starts_at:, sport: "futebol", sport_name: "Futebol", competition: "NBA")
+    {
+      ge_id: ge_id,
+      sport: sport,
+      sport_name: sport_name,
+      title: title,
+      starts_at: starts_at,
+      timed: true,
+      competition: competition,
+      watch_on: "ESPN",
+      note: "#{competition} · regular"
+    }
+  end
 end
