@@ -10,6 +10,7 @@ class GeClient
 
   class Error < StandardError; end
 
+  # Contestant is a union; popularName 422s on the union itself.
   CONTESTANT_FIELDS = <<~GRAPHQL.freeze
     ... on Team { popularName }
     ... on Athlete { popularName }
@@ -28,6 +29,8 @@ class GeClient
     }
   GRAPHQL
 
+  # AgendaItem is a union. `match` on the union 422s; so do id/startDate
+  # on SoccerEvent. Wrap MATCH_INNER in the two concrete types.
   MATCH_FIELDS = <<~GRAPHQL.freeze
     ... on SoccerEvent { #{MATCH_INNER} }
     ... on MatchEventKind { #{MATCH_INNER} }
@@ -80,7 +83,7 @@ class GeClient
     rescue Error, Timeout::Error, SocketError, JSON::ParserError, Errno::ECONNREFUSED => e
       retry if attempts < 2
 
-      raise Error, e.message
+      raise Error, "geql retry exhausted after #{attempts} attempts: #{e.class}: #{e.message}"
     end
   end
 

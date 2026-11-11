@@ -134,48 +134,9 @@ class AgendaStore
 
   def replace_tv_window(events, from:, to:, prune_dates: nil)
     @db.transaction do
-      events.each do |event|
-        ensure_sport(event[:sport], event[:sport_name])
-        @db.execute(<<~SQL, tv_row(event))
-          INSERT INTO tv_events (ge_id, sport, sport_name, title, starts_at, timed, competition, watch_on, note)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(ge_id) DO UPDATE SET
-            sport = excluded.sport,
-            sport_name = excluded.sport_name,
-            title = excluded.title,
-            starts_at = excluded.starts_at,
-            timed = excluded.timed,
-            competition = excluded.competition,
-            watch_on = excluded.watch_on,
-            note = excluded.note
-        SQL
-      end
-
-      start = coerce_date(from).iso8601
-      stop = coerce_date(to).iso8601
-      @db.execute(
-        "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) < ? OR substr(starts_at, 1, 10) > ?",
-        [start, stop]
-      )
-
-      ids = events.map { |event| event[:ge_id].to_s }
-      dates = Array(prune_dates || (from..to).to_a).map { |day| coerce_date(day).iso8601 }
-      unless dates.empty?
-        if ids.empty?
-          date_ph = Array.new(dates.size, "?").join(",")
-          @db.execute(
-            "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) IN (#{date_ph})",
-            dates
-          )
-        else
-          id_ph = Array.new(ids.size, "?").join(",")
-          date_ph = Array.new(dates.size, "?").join(",")
-          @db.execute(
-            "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) IN (#{date_ph}) AND ge_id NOT IN (#{id_ph})",
-            dates + ids
-          )
-        end
-      end
+      upsert_tv_events(events)
+      delete_tv_outside_window(from, to)
+      prune_tv_on_dates(events, Array(prune_dates || (from..to).to_a))
     end
   end
 
@@ -250,6 +211,55 @@ class AgendaStore
         [sport.slug, sport.name]
       )
     end
+  end
+
+  def upsert_tv_events(events)
+    events.each do |event|
+      ensure_sport(event[:sport], event[:sport_name])
+      @db.execute(<<~SQL, tv_row(event))
+        INSERT INTO tv_events (ge_id, sport, sport_name, title, starts_at, timed, competition, watch_on, note)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(ge_id) DO UPDATE SET
+          sport = excluded.sport,
+          sport_name = excluded.sport_name,
+          title = excluded.title,
+          starts_at = excluded.starts_at,
+          timed = excluded.timed,
+          competition = excluded.competition,
+          watch_on = excluded.watch_on,
+          note = excluded.note
+      SQL
+    end
+  end
+
+  def delete_tv_outside_window(from, to)
+    @db.execute(
+      "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) < ? OR substr(starts_at, 1, 10) > ?",
+      [coerce_date(from).iso8601, coerce_date(to).iso8601]
+    )
+  end
+
+  # Failed GE days stay in prune_dates' complement so a 422/timeout
+  # does not wipe yesterday's rows for that date.
+  def prune_tv_on_dates(events, dates)
+    return if dates.empty?
+
+    ids = events.map { |event| event[:ge_id].to_s }
+    day_keys = dates.map { |day| coerce_date(day).iso8601 }
+    date_ph = Array.new(day_keys.size, "?").join(",")
+    if ids.empty?
+      @db.execute(
+        "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) IN (#{date_ph})",
+        day_keys
+      )
+      return
+    end
+
+    id_ph = Array.new(ids.size, "?").join(",")
+    @db.execute(
+      "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) IN (#{date_ph}) AND ge_id NOT IN (#{id_ph})",
+      day_keys + ids
+    )
   end
 
   def ensure_sport(slug, name)

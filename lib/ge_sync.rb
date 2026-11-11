@@ -43,7 +43,7 @@ class GeSync
 
     if succeeded.empty?
       @store.record_sync!(synced_at: @now, event_count: @store.tv_events_grouped.values.flatten.size, error: errors.join("; "))
-      raise FetchError, "geql falhou em todos os dias (#{errors.first})"
+      raise FetchError, "geql falhou em todos os dias: #{errors.join('; ')}"
     end
 
     @store.replace_tv_window(events, from: from, to: to, prune_dates: succeeded)

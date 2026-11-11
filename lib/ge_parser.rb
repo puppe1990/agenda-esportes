@@ -37,6 +37,7 @@ module GeParser
   private_class_method :buckets
 
   def self.event_from(item, slug:, sport_name:, competition:)
+    # Live GE wraps fields under match; flattened fixtures skip that key.
     match = item["match"] || item
     first = contestant_name(match["firstContestant"])
     second = contestant_name(match["secondContestant"])
