@@ -74,20 +74,18 @@ class AppHomeTest < AppTestCase
     refute_includes last_response.body, 'class="sport-card"'
   end
 
-  def test_home_renders_sport_cards_when_the_day_has_no_tv_games
+  def test_home_says_no_tv_games_instead_of_sport_name_cards
     seed_tv(
       { sport: "futebol", sport_name: "Futebol" },
       { sport: "basquete", sport_name: "Basquete", starts_at: "2026-11-09T21:00:00-03:00" }
     )
     get "/?dia=2026-11-17"
 
-    assert_includes last_response.body, 'class="sport-card"'
-    assert_includes last_response.body, 'value="futebol"'
-    assert_includes last_response.body, 'value="basquete"'
+    assert_includes last_response.body, "Sem jogos na TV neste dia."
+    refute_includes last_response.body, 'class="sport-card"'
     refute_includes last_response.body, 'class="game-card"'
     refute_includes last_response.body, "<select"
     refute_includes last_response.body, 'value="corrida"'
-    assert_equal 2, last_response.body.scan(/class="sport-card"/).size
   end
 
   def test_home_lists_saved_items_in_kickoff_order

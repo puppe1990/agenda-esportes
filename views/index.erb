@@ -98,19 +98,7 @@
           </div>
           <% end %>
         <% else %>
-          <div class="sport-cards" role="group" aria-label="Esportes de <%= day.strftime('%d/%m') %>">
-            <% sports.each do |sport| %>
-              <form method="post" action="/agenda" class="sport-card">
-                <input type="hidden" name="authenticity_token" value="<%= csrf_token %>">
-                <input type="hidden" name="day" value="<%= day.iso8601 %>">
-                <input type="hidden" name="sport" value="<%= sport.slug %>">
-                <button type="submit" aria-label="Colocar <%= sport.name %> no dia <%= day.strftime('%d/%m') %>">
-                  <span class="sport-card-day"><%= day.strftime("%d/%m") %></span>
-                  <strong><%= sport.name %></strong>
-                </button>
-              </form>
-            <% end %>
-          </div>
+          <p class="empty-day note">Sem jogos na TV neste dia.</p>
         <% end %>
       </div>
     </div>
