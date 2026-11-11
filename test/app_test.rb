@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "rack/test"
+require "json"
 
 ENV["DATABASE_PATH"] = File.join(Dir.mktmpdir("agenda-esportes-app-"), "agenda.sqlite3")
 
@@ -18,10 +19,16 @@ class AppTest < Minitest::Test
     path = ENV.fetch("DATABASE_PATH")
     FileUtils.rm_f(path)
     AgendaEsportes::App.store = AgendaStore.new(path)
+    AgendaEsportes::App.ge_client = nil if AgendaEsportes::App.respond_to?(:ge_client=)
   end
 
   def test_home_lists_automobilismo_instead_of_corrida
-    get "/"
+    seed_tv(
+      sport: "automobilismo",
+      sport_name: "Automobilismo",
+      title: Faker::Vehicle.make_and_model
+    )
+    get "/?dia=2026-11-08"
 
     assert last_response.ok?
     assert_includes last_response.body, "Automobilismo"
@@ -30,13 +37,15 @@ class AppTest < Minitest::Test
   end
 
   def test_home_renders_game_cards_that_post_the_match_into_the_agenda
+    title = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    seed_tv(title: title, starts_at: "2026-11-08T17:00:00-03:00")
     get "/?dia=2026-11-08"
 
     assert_includes last_response.body, "agendinha"
     assert_includes last_response.body, 'class="game-card"'
-    assert_includes last_response.body, "Vasco x Palmeiras"
+    assert_includes last_response.body, title
     assert_includes last_response.body, 'name="title"'
-    assert_includes last_response.body, 'value="Vasco x Palmeiras"'
+    assert_includes last_response.body, %(value="#{title}")
     assert_includes last_response.body, 'value="futebol"'
     refute_includes last_response.body, "<select"
     refute_includes last_response.body, "Colocar na agenda"
@@ -49,38 +58,55 @@ class AppTest < Minitest::Test
   end
 
   def test_home_game_cards_show_where_to_watch_and_a_game_note
+    seed_tv(
+      title: "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}",
+      watch_on: "Globo · CazéTV",
+      note: "Ida 1–0. Sem prorrogação: empate no agregado vai a pênaltis."
+    )
     get "/?dia=2026-11-08"
 
     assert_includes last_response.body, 'class="game-card-where"'
     assert_includes last_response.body, 'class="game-card-note"'
     assert_includes last_response.body, "Globo"
     assert_match(/pênaltis|penaltis/i, last_response.body)
-    assert_includes last_response.body, "Band"
     assert_includes last_response.body, "CazéTV"
   end
 
   def test_monday_game_card_shows_espn_and_standings
+    home = Faker::Sports::Basketball.team
+    away = Faker::Sports::Basketball.team
+    title = "#{home} x #{away}"
+    seed_tv(
+      sport: "basquete",
+      sport_name: "Basquete",
+      title: title,
+      starts_at: "2026-11-09T21:00:00-03:00",
+      watch_on: "ESPN",
+      note: "NBA · 6–1"
+    )
     get "/?dia=2026-11-09"
 
-    assert_includes last_response.body, "Bills x Vikings"
+    assert_includes last_response.body, title
     assert_includes last_response.body, "ESPN"
     assert_match(/6.?1/, last_response.body)
-    assert_includes last_response.body, "Wizards x Pistons"
-    assert_includes last_response.body, "Lakers x Hawks"
-    assert_includes last_response.body, "Nuggets x Rockets"
+    assert_includes last_response.body, 'data-s="basquete"'
     refute_includes last_response.body, 'class="sport-card"'
   end
 
   def test_home_renders_sport_cards_when_the_day_has_no_tv_games
+    seed_tv(
+      { sport: "futebol", sport_name: "Futebol" },
+      { sport: "basquete", sport_name: "Basquete", starts_at: "2026-11-09T21:00:00-03:00" }
+    )
     get "/?dia=2026-11-17"
 
     assert_includes last_response.body, 'class="sport-card"'
-    assert_includes last_response.body, 'value="automobilismo"'
     assert_includes last_response.body, 'value="futebol"'
+    assert_includes last_response.body, 'value="basquete"'
     refute_includes last_response.body, 'class="game-card"'
     refute_includes last_response.body, "<select"
     refute_includes last_response.body, 'value="corrida"'
-    assert_equal 4, last_response.body.scan(/class="sport-card"/).size
+    assert_equal 2, last_response.body.scan(/class="sport-card"/).size
   end
 
   def test_post_places_the_selected_sport_on_the_chosen_day
@@ -106,10 +132,11 @@ class AppTest < Minitest::Test
   end
 
   def test_post_game_stores_the_match_title_and_lists_sport_plus_game
+    title = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
     post "/agenda", {
       sport: "futebol",
       day: "2026-11-08",
-      title: "Vasco x Palmeiras",
+      title: title,
       authenticity_token: csrf_token
     }
 
@@ -119,8 +146,8 @@ class AppTest < Minitest::Test
     stored = AgendaEsportes::App.store.items_on(Date.new(2026, 11, 8))
     assert_equal 1, stored.size
     assert_equal "futebol", stored.first.sport
-    assert_equal "Vasco x Palmeiras", stored.first.title
-    assert_includes last_response.body, "Vasco x Palmeiras"
+    assert_equal title, stored.first.title
+    assert_includes last_response.body, title
     assert_includes last_response.body, "Futebol"
     refute_match(
       %r{<h3><a href="/agenda/#{stored.first.id}">Futebol</a></h3>},
@@ -129,12 +156,13 @@ class AppTest < Minitest::Test
   end
 
   def test_post_game_keeps_kickoff_and_note_on_the_agenda
-    note = "São Januário. Ida 1–0 Palmeiras. Sem prorrogação: empate no agregado vai a pênaltis."
+    title = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    note = "São Januário. Ida 1–0. Sem prorrogação: empate no agregado vai a pênaltis."
 
     post "/agenda", {
       sport: "futebol",
       day: "2026-11-08",
-      title: "Vasco x Palmeiras",
+      title: title,
       kicks_at: "17h",
       note: note,
       watch: "Globo, ge tv · sportv, Premiere, Prime",
@@ -221,12 +249,18 @@ class AppTest < Minitest::Test
   end
 
   def test_home_is_the_system_without_editorial_copy
+    football = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    gp = Faker::Vehicle.make_and_model
+    seed_tv(
+      { title: football },
+      { sport: "automobilismo", sport_name: "Automobilismo", title: gp, starts_at: "2026-11-08T14:00:00-03:00" }
+    )
     get "/?dia=2026-11-08"
 
     assert_includes last_response.body, 'class="cal"'
     assert_includes last_response.body, 'class="game-card"'
-    assert_includes last_response.body, "Vasco x Palmeiras"
-    assert_includes last_response.body, "Grande Prêmio de São Paulo"
+    assert_includes last_response.body, football
+    assert_includes last_response.body, gp
     refute_includes last_response.body, "Domingo lotado"
     refute_includes last_response.body, "A grade que sobrou"
     refute_includes last_response.body, "Três esportes, um relógio"
@@ -375,10 +409,17 @@ class AppTest < Minitest::Test
   end
 
   def test_saved_match_without_details_fills_from_the_tv_grid
+    title = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    seed_tv(
+      title: title,
+      starts_at: "2026-11-08T17:00:00-03:00",
+      watch_on: "Globo",
+      note: "Ida 1–0. Vai a pênaltis."
+    )
     AgendaEsportes::App.store.add(
       sport: "futebol",
       starts_at: Date.new(2026, 11, 8),
-      title: "Vasco x Palmeiras"
+      title: title
     )
 
     get "/?dia=2026-11-08"
@@ -414,12 +455,22 @@ class AppTest < Minitest::Test
   end
 
   def test_home_month_grid_shows_games_from_other_days_as_chips
+    monday = "#{Faker::Team.name} x #{Faker::Team.name}"
+    seed_tv(
+      { title: "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}" },
+      {
+        sport: "nfl",
+        sport_name: "NFL",
+        title: monday,
+        starts_at: "2026-11-09T22:00:00-03:00"
+      }
+    )
     get "/?dia=2026-11-08"
 
     assert_includes last_response.body, 'class="cal-event"'
-    assert_includes last_response.body, "Bills x Vikings"
+    assert_includes last_response.body, monday
     assert_match(
-      %r{class="cal-event"[^>]*data-s="nfl"[\s\S]*?name="day" value="2026-11-09"[\s\S]*?name="title" value="Bills x Vikings"},
+      %r{class="cal-event"[^>]*data-s="nfl"[\s\S]*?name="day" value="2026-11-09"[\s\S]*?name="title" value="#{Regexp.escape(monday)}"},
       last_response.body
     )
     refute_includes last_response.body, "<select"
@@ -427,46 +478,57 @@ class AppTest < Minitest::Test
   end
 
   def test_saved_tv_game_becomes_a_saved_chip_on_the_calendar
+    title = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    seed_tv(title: title)
     item = AgendaEsportes::App.store.add(
       sport: "futebol",
       starts_at: Date.new(2026, 11, 8),
-      title: "Vasco x Palmeiras",
+      title: title,
       kicks_at: "17h"
     )
 
     get "/?dia=2026-11-08"
 
     assert_match(
-      %r{<a class="cal-event is-saved" data-s="fut" href="/agenda/#{item.id}">},
+      %r{<a class="cal-event is-saved" data-s="futebol" href="/agenda/#{item.id}">},
       last_response.body
     )
     cal_forms = last_response.body.scan(%r{<form method="post" action="/agenda" class="cal-event".*?</form>}m)
-    refute cal_forms.any? { |form| form.include?('value="Vasco x Palmeiras"') }
+    refute cal_forms.any? { |form| form.include?(%(value="#{title}")) }
   end
 
   def test_day_cards_skip_games_already_on_the_agenda
+    saved = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    open_game = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    seed_tv({ title: saved }, { title: open_game, starts_at: "2026-11-08T16:00:00-03:00" })
     AgendaEsportes::App.store.add(
       sport: "futebol",
       starts_at: Date.new(2026, 11, 8),
-      title: "Vasco x Palmeiras",
+      title: saved,
       kicks_at: "17h"
     )
 
     get "/?dia=2026-11-08"
 
     game_cards = last_response.body.scan(%r{<form method="post" action="/agenda" class="game-card".*?</form>}m)
-    refute game_cards.any? { |form| form.include?('value="Vasco x Palmeiras"') }
-    assert game_cards.any? { |form| form.include?('value="Crystal Palace x Liverpool"') }
+    refute game_cards.any? { |form| form.include?(%(value="#{saved}")) }
+    assert game_cards.any? { |form| form.include?(%(value="#{open_game}")) }
   end
 
   def test_home_opens_the_day_from_dia_mes_ano_query
+    sunday = "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}"
+    monday = "#{Faker::Team.name} x #{Faker::Team.name}"
+    seed_tv(
+      { title: sunday },
+      { sport: "nfl", sport_name: "NFL", title: monday, starts_at: "2026-11-09T22:00:00-03:00" }
+    )
     get "/?dia=8&mes=11&ano=2026"
 
     assert last_response.ok?
     assert_includes last_response.body, 'aria-label="Jogos de 08/11"'
     game_cards = last_response.body.scan(%r{<form method="post" action="/agenda" class="game-card".*?</form>}m)
-    assert game_cards.any? { |form| form.include?('value="Vasco x Palmeiras"') }
-    refute game_cards.any? { |form| form.include?('value="Bills x Vikings"') }
+    assert game_cards.any? { |form| form.include?(%(value="#{sunday}")) }
+    refute game_cards.any? { |form| form.include?(%(value="#{monday}")) }
   end
 
   def test_calendar_day_links_use_dia_mes_ano
@@ -552,28 +614,39 @@ class AppTest < Minitest::Test
   end
 
   def test_home_week_strip_links_the_monday_week_with_dia_mes_ano
+    seed_tv(
+      { starts_at: "2026-11-08T14:00:00-03:00" },
+      { starts_at: "2026-11-08T16:00:00-03:00" },
+      { starts_at: "2026-11-08T17:00:00-03:00" }
+    )
     get "/?dia=8&mes=11&ano=2026"
 
     assert_match(%r{class="week-strip"}, last_response.body)
     assert_match(%r{class="week-day[^"]*" href="/\?dia=2&(?:amp;)?mes=11&(?:amp;)?ano=2026"}, last_response.body)
     assert_match(%r{class="week-day is-on[^"]*" href="/\?dia=8&(?:amp;)?mes=11&(?:amp;)?ano=2026"}, last_response.body)
-    assert_match(%r{18 jogos}i, last_response.body)
+    assert_match(%r{3 jogos}i, last_response.body)
     assert_match(%r{href="/\?dia=1&(?:amp;)?mes=11&(?:amp;)?ano=2026"[^>]*>[\s\S]*?semana anterior}i, last_response.body)
     assert_match(%r{href="/\?dia=15&(?:amp;)?mes=11&(?:amp;)?ano=2026"[^>]*>[\s\S]*?próxima semana}i, last_response.body)
   end
 
   def test_home_sport_pills_count_games_on_the_selected_day
+    seed_tv(
+      { sport: "futebol", sport_name: "Futebol", starts_at: "2026-11-08T16:00:00-03:00" },
+      { sport: "futebol", sport_name: "Futebol", starts_at: "2026-11-08T17:00:00-03:00" },
+      { sport: "basquete", sport_name: "Basquete", starts_at: "2026-11-08T21:00:00-03:00" },
+      { sport: "basquete", sport_name: "Basquete", starts_at: "2026-11-09T21:00:00-03:00" }
+    )
     get "/?dia=8&mes=11&ano=2026"
 
-    assert_match(%r{<label for="f-all" class="sport-pill">[\s\S]*?Todos[\s\S]*?<span class="sport-pill-count">18</span>}i, last_response.body)
-    assert_match(%r{<label for="f-fut" class="sport-pill">[\s\S]*?Futebol[\s\S]*?<span class="sport-pill-count">7</span>}i, last_response.body)
-    assert_match(%r{<label for="f-nfl" class="sport-pill">[\s\S]*?NFL[\s\S]*?<span class="sport-pill-count">6</span>}i, last_response.body)
-    assert_match(%r{<label for="f-nba" class="sport-pill">[\s\S]*?NBA[\s\S]*?<span class="sport-pill-count">4</span>}i, last_response.body)
-    assert_match(%r{<label for="f-auto" class="sport-pill">[\s\S]*?Automobilismo[\s\S]*?<span class="sport-pill-count">1</span>}i, last_response.body)
+    assert_match(%r{<label for="f-all" class="sport-pill">[\s\S]*?Todos[\s\S]*?<span class="sport-pill-count">3</span>}i, last_response.body)
+    assert_match(%r{<label for="f-futebol" class="sport-pill">[\s\S]*?Futebol[\s\S]*?<span class="sport-pill-count">2</span>}i, last_response.body)
+    assert_match(%r{<label for="f-basquete" class="sport-pill">[\s\S]*?Basquete[\s\S]*?<span class="sport-pill-count">1</span>}i, last_response.body)
+    refute_includes last_response.body, 'for="f-fut"'
     refute_match(/tênis|tenis|esports|e-sports/i, last_response.body)
   end
 
   def test_home_lista_is_the_default_view_and_grade_stays_available
+    seed_tv
     get "/?dia=8&mes=11&ano=2026"
 
     assert_match(%r{id="v-lista"[^>]*checked}, last_response.body)
@@ -610,6 +683,7 @@ class AppTest < Minitest::Test
   end
 
   def test_home_nav_does_not_repeat_sport_filters
+    seed_tv(sport: "futebol", sport_name: "Futebol")
     get "/?dia=8&mes=11&ano=2026"
 
     refute_match(%r{<nav class="bar"[^>]*>[\s\S]*?<label for="f-all">Tudo</label>}, last_response.body)
@@ -665,9 +739,134 @@ class AppTest < Minitest::Test
     assert_equal [1200, 630], header[16, 8].unpack("NN")
   end
 
+  def test_home_meta_describes_the_seven_day_tv_window
+    get "/"
+
+    assert_includes last_response.body, "Jogos da TV nos próximos 7 dias."
+    refute_includes last_response.body, "Futebol, NFL, NBA e automobilismo. Clica no jogo e grava na agenda."
+  end
+
+  def test_home_generates_filter_css_for_window_slugs
+    seed_tv(sport: "basquete", sport_name: "Basquete")
+    get "/?dia=2026-11-08"
+
+    assert_includes last_response.body, "body:has(#f-basquete:checked)"
+    assert_includes last_response.body, ".game-card:not([data-s=basquete])"
+    refute_includes last_response.body, "#f-fut"
+  end
+
+  def test_ge_sync_is_404_when_token_is_unset
+    with_sync_token(nil) do
+      get "/interno/ge-sync"
+    end
+
+    assert_equal 404, last_response.status
+  end
+
+  def test_ge_sync_is_401_with_the_wrong_bearer
+    with_sync_token("segredo-certo") do
+      header "Authorization", "Bearer outro"
+      get "/interno/ge-sync"
+    end
+
+    assert_equal 401, last_response.status
+  end
+
+  def test_ge_sync_upserts_with_a_stub_client
+    AgendaEsportes::App.ge_client = EmptyGeClient.new
+    with_sync_token("segredo-certo") do
+      header "Authorization", "Bearer segredo-certo"
+      get "/interno/ge-sync"
+    end
+
+    assert_equal 200, last_response.status
+    payload = JSON.parse(last_response.body)
+    assert_equal true, payload["ok"]
+    assert payload["from"]
+    assert payload["to"]
+    assert payload["synced_at"]
+  end
+
+  def test_ge_sync_is_502_when_ge_is_down
+    AgendaEsportes::App.ge_client = DownGeClient.new
+    with_sync_token("segredo-certo") do
+      header "Authorization", "Bearer segredo-certo"
+      get "/interno/ge-sync"
+    end
+
+    assert_equal 502, last_response.status
+    payload = JSON.parse(last_response.body)
+    assert_equal false, payload["ok"]
+    assert payload["error"]
+  end
+
+  def test_home_does_not_lazy_sync_in_test
+    AgendaEsportes::App.ge_client = DownGeClient.new
+    get "/"
+
+    assert last_response.ok?
+  end
+
   def csrf_token
     get "/"
     last_response.body[/name="authenticity_token"\s+value="([^"]+)"/, 1] ||
-      last_response.body[/value="([^"]+)"\s+name="authenticity_token"/, 1]
+      last_response.body[/value="([^"]+)"\s+name="authenticity_token"/, 1] ||
+      last_response.body[/name="csrf-token" content="([^"]+)"/, 1]
+  end
+
+  def seed_tv(*events, **single)
+    events = [single] if events.empty?
+    rows = events.each_with_index.map do |event, index|
+      {
+        ge_id: "ge-#{index + 1}",
+        sport: "futebol",
+        sport_name: "Futebol",
+        title: "#{Faker::Sports::Football.team} x #{Faker::Sports::Football.team}",
+        starts_at: "2026-11-08T17:00:00-03:00",
+        timed: true,
+        competition: "Liga",
+        watch_on: "Globo",
+        note: "Liga · pênaltis"
+      }.merge(event)
+    end
+    from = rows.map { |row| Date.iso8601(row[:starts_at][0, 10]) }.min
+    AgendaEsportes::App.store.replace_tv_window(rows, from: from, to: from + 6)
+    rows
+  end
+
+  def with_sync_token(token)
+    previous = ENV["GE_SYNC_TOKEN"]
+    if token.nil?
+      ENV.delete("GE_SYNC_TOKEN")
+    else
+      ENV["GE_SYNC_TOKEN"] = token
+    end
+    yield
+  ensure
+    if previous.nil?
+      ENV.delete("GE_SYNC_TOKEN")
+    else
+      ENV["GE_SYNC_TOKEN"] = previous
+    end
+  end
+
+  class EmptyGeClient
+    def championships_agenda(_date)
+      { "data" => { "championshipsAgenda" => [] } }
+    end
+
+    def multisport_agenda(_date)
+      { "data" => { "multisportTabAgenda" => [] } }
+    end
+  end
+
+  class DownGeClient
+    def championships_agenda(_date)
+      raise GeClient::Error, "geql down"
+    end
+
+    def multisport_agenda(_date)
+      raise GeClient::Error, "geql down"
+    end
   end
 end

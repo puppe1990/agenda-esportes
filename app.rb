@@ -6,11 +6,15 @@ require "rack/method_override"
 require "rack/protection"
 require "date"
 require "fileutils"
+require "json"
+require "timeout"
 require_relative "lib/sports_catalog"
 require_relative "lib/agenda_store"
 require_relative "lib/month_grid"
 require_relative "lib/week_strip"
 require_relative "lib/tv_grid"
+require_relative "lib/ge_client"
+require_relative "lib/ge_sync"
 
 module AgendaEsportes
   class App < Sinatra::Base
@@ -27,16 +31,20 @@ module AgendaEsportes
     use Rack::MethodOverride
     use Rack::Protection::AuthenticityToken
 
-    FILTER_SLUG = {
-      "futebol" => "fut",
-      "automobilismo" => "auto"
-    }.freeze
-
     class << self
-      attr_writer :store
+      attr_accessor :ge_client
+
+      def store=(value)
+        @store = value
+        TvGrid.store = value
+      end
 
       def store
-        @store ||= AgendaStore.new(database_path)
+        @store ||= begin
+          value = AgendaStore.new(database_path)
+          TvGrid.store = value
+          value
+        end
       end
 
       def database_path
@@ -48,6 +56,9 @@ module AgendaEsportes
 
     before do
       @show_bar_filters = true
+      maybe_lazy_sync if request.get? && request.path_info == "/"
+      fill_saved_broadcasts
+      @filter_sports = filter_sports
     end
 
     helpers do
@@ -118,13 +129,9 @@ module AgendaEsportes
       end
 
       def sport_name(slug)
-        SportsCatalog.find!(slug).name
+        store.find_sport!(slug).name
       rescue SportsCatalog::UnknownSport
         slug.to_s
-      end
-
-      def sport_filter(slug)
-        FILTER_SLUG.fetch(slug, slug)
       end
 
       def find_item!
@@ -154,7 +161,75 @@ module AgendaEsportes
       end
 
       def games_by_day
-        TvGrid::ALL.group_by { |game| game.starts_at.to_date }
+        TvGrid.grouped
+      end
+
+      def filter_sports
+        seen = {}
+        store.sports_in_tv_window.each { |sport| seen[sport.slug] = sport }
+        store.all.each do |item|
+          next if seen[item.sport]
+
+          seen[item.sport] = begin
+            store.find_sport!(item.sport)
+          rescue SportsCatalog::UnknownSport
+            SportsCatalog::Item.new(slug: item.sport, name: item.sport)
+          end
+        end
+        seen.values.sort_by(&:slug)
+      end
+
+      def filter_css
+        Array(@filter_sports).map do |sport|
+          slug = sport.slug
+          <<~CSS
+            body:has(#f-#{slug}:checked) .bar label[for=f-#{slug}]{
+              color:var(--accent);border-bottom-color:var(--accent);
+            }
+            body:has(#f-#{slug}:checked) .sport-pill[for=f-#{slug}]{
+              background:var(--accent);
+              color:var(--cta-fg);
+            }
+            body:has(#f-#{slug}:checked) .sport-pill[for=f-#{slug}] .sport-pill-count{
+              background:rgba(11,18,16,.16);
+              color:inherit;
+            }
+            body:has(#f-#{slug}:checked) .ev:not([data-s=#{slug}]),
+            body:has(#f-#{slug}:checked) .game-card:not([data-s=#{slug}]),
+            body:has(#f-#{slug}:checked) .cal-event:not([data-s=#{slug}]){display:none}
+          CSS
+        end.join
+      end
+
+      def ge_client
+        self.class.ge_client || GeClient.new
+      end
+
+      def maybe_lazy_sync
+        return if settings.test?
+        return unless GeSync.stale?(store)
+
+        Timeout.timeout(8) { GeSync.call(store: store, client: ge_client) }
+      rescue GeSync::FetchError, Timeout::Error, GeClient::Error => error
+        $stderr.puts "ge-sync lazy: #{error.class}: #{error.message}"
+      end
+
+      def bearer_token
+        request.env["HTTP_AUTHORIZATION"].to_s[/\ABearer\s+(\S+)/, 1]
+      end
+
+      def run_ge_sync
+        expected = ENV["GE_SYNC_TOKEN"].to_s
+        halt 404 unless expected.bytesize.positive?
+        halt 401 unless bearer_token == expected
+
+        content_type :json
+        result = GeSync.call(store: store, client: ge_client)
+        state = store.sync_state
+        JSON.generate(result.merge(synced_at: state && state[:synced_at]))
+      rescue GeSync::FetchError => error
+        content_type :json
+        halt 502, JSON.generate({ ok: false, error: error.message })
       end
 
       def week_strip_for(day)
@@ -200,10 +275,6 @@ module AgendaEsportes
       end
     end
 
-    before do
-      fill_saved_broadcasts
-    end
-
     get "/" do
       @show_bar_filters = false
       day = selected_day
@@ -217,10 +288,18 @@ module AgendaEsportes
         grid: MonthGrid.new(year: day.year, month: day.month, marked: marked),
         week: week_strip_for(day),
         day_sport_counts: sport_counts(games),
-        sports: SportsCatalog::ALL,
+        sports: store.sports_in_tv_window,
         month_games: games_by_day,
         saved_by_title: saved_lookup
       }
+    end
+
+    get "/interno/ge-sync" do
+      run_ge_sync
+    end
+
+    post "/interno/ge-sync" do
+      run_ge_sync
     end
 
     get "/agenda" do
@@ -228,7 +307,7 @@ module AgendaEsportes
     end
 
     get "/agenda/:id/edit" do
-      erb :"agenda/edit", locals: { item: find_item!, sports: SportsCatalog::ALL }
+      erb :"agenda/edit", locals: { item: find_item!, sports: store.sports }
     end
 
     get "/agenda/:id" do

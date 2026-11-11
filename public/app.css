@@ -82,30 +82,10 @@ a{color:inherit}
   transition:color .2s var(--ease-out),border-color .2s var(--ease-out);
 }
 .bar label:hover{color:var(--fg)}
-body:has(#f-all:checked) .bar label[for=f-all],
-body:has(#f-fut:checked) .bar label[for=f-fut],
-body:has(#f-nfl:checked) .bar label[for=f-nfl],
-body:has(#f-nba:checked) .bar label[for=f-nba],
-body:has(#f-auto:checked) .bar label[for=f-auto]{
+body:has(#f-all:checked) .bar label[for=f-all]{
   color:var(--accent);border-bottom-color:var(--accent);
 }
 body:has(.week-board) .bar label{display:none}
-body:has(#f-fut:checked) .ev:not([data-s=fut]),
-body:has(#f-nfl:checked) .ev:not([data-s=nfl]),
-body:has(#f-nba:checked) .ev:not([data-s=nba]),
-body:has(#f-auto:checked) .ev:not([data-s=auto]),
-body:has(#f-fut:checked) .game-card:not([data-s=fut]),
-body:has(#f-nfl:checked) .game-card:not([data-s=nfl]),
-body:has(#f-nba:checked) .game-card:not([data-s=nba]),
-body:has(#f-auto:checked) .game-card:not([data-s=auto]),
-body:has(#f-fut:checked) .cal-event:not([data-s=fut]),
-body:has(#f-nfl:checked) .cal-event:not([data-s=nfl]),
-body:has(#f-nba:checked) .cal-event:not([data-s=nba]),
-body:has(#f-auto:checked) .cal-event:not([data-s=auto]){display:none}
-body:has(#f-fut:checked) .blk:not(.blk-fut),
-body:has(#f-nfl:checked) .blk:not(.blk-nfl),
-body:has(#f-nba:checked) .blk:not(.blk-nba),
-body:has(#f-auto:checked) .blk:not(.blk-auto){display:none}
 
 section{padding:clamp(72px,12vh,160px) 0}
 section.app-page{padding:32px 0 64px}
@@ -382,19 +362,11 @@ body:has(#v-grade:checked) label[for=v-grade]{
   padding:2px 7px;
   font-variant-numeric:tabular-nums;
 }
-body:has(#f-all:checked) .sport-pill[for=f-all],
-body:has(#f-fut:checked) .sport-pill[for=f-fut],
-body:has(#f-nfl:checked) .sport-pill[for=f-nfl],
-body:has(#f-nba:checked) .sport-pill[for=f-nba],
-body:has(#f-auto:checked) .sport-pill[for=f-auto]{
+body:has(#f-all:checked) .sport-pill[for=f-all]{
   background:var(--accent);
   color:var(--cta-fg);
 }
-body:has(#f-all:checked) .sport-pill[for=f-all] .sport-pill-count,
-body:has(#f-fut:checked) .sport-pill[for=f-fut] .sport-pill-count,
-body:has(#f-nfl:checked) .sport-pill[for=f-nfl] .sport-pill-count,
-body:has(#f-nba:checked) .sport-pill[for=f-nba] .sport-pill-count,
-body:has(#f-auto:checked) .sport-pill[for=f-auto] .sport-pill-count{
+body:has(#f-all:checked) .sport-pill[for=f-all] .sport-pill-count{
   background:rgba(11,18,16,.16);
   color:inherit;
 }

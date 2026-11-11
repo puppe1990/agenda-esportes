@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agenda de esportes</title>
-<meta name="description" content="Futebol, NFL, NBA e automobilismo. Clica no jogo e grava na agenda.">
+<meta name="description" content="Jogos da TV nos próximos 7 dias.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0b0e14">
+<meta name="csrf-token" content="<%= csrf_token %>">
 <meta property="og:title" content="Agenda de esportes">
-<meta property="og:description" content="Futebol, NFL, NBA e automobilismo. Clica no jogo e grava na agenda.">
+<meta property="og:description" content="Jogos da TV nos próximos 7 dias.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://agenda-esportes.sites.gestaobem.com">
 <meta property="og:locale" content="pt_BR">
@@ -16,23 +17,23 @@
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Agenda de esportes: faixa da semana dark mint. Clica no jogo e grava.">
+<meta property="og:image:alt" content="Agenda de esportes: faixa da semana dark mint. Jogos da TV nos próximos 7 dias.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Agenda de esportes">
-<meta name="twitter:description" content="Futebol, NFL, NBA e automobilismo. Clica no jogo e grava na agenda.">
+<meta name="twitter:description" content="Jogos da TV nos próximos 7 dias.">
 <meta name="twitter:image" content="https://agenda-esportes.sites.gestaobem.com/og.png">
 <link rel="preload" href="/fonts/instrument-serif-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0e14'/%3E%3Crect x='6' y='8' width='20' height='16' rx='2' fill='none' stroke='%236eff94' stroke-width='2'/%3E%3Cpath d='M10 16h4M18 16h4' stroke='%236eff94' stroke-width='2' stroke-linecap='square'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="<%= asset_path("app.css") %>">
+<style><%= filter_css %></style>
 </head>
 <body>
 <a class="skip" href="#conteudo">Pular para o conteúdo</a>
 <input class="filtro" type="radio" name="filtro" id="f-all" checked>
-<input class="filtro" type="radio" name="filtro" id="f-fut">
-<input class="filtro" type="radio" name="filtro" id="f-nfl">
-<input class="filtro" type="radio" name="filtro" id="f-nba">
-<input class="filtro" type="radio" name="filtro" id="f-auto">
+<% Array(@filter_sports).each do |sport| %>
+<input class="filtro" type="radio" name="filtro" id="f-<%= sport.slug %>">
+<% end %>
 
 <div class="grain" aria-hidden="true"></div>
 
@@ -42,10 +43,9 @@
     <a class="mine-link" href="/agenda">Minha agenda</a>
     <% if @show_bar_filters %>
     <label for="f-all">Tudo</label>
-    <label for="f-fut">Futebol</label>
-    <label for="f-nfl">NFL</label>
-    <label for="f-nba">NBA</label>
-    <label for="f-auto">Automobilismo</label>
+    <% Array(@filter_sports).each do |sport| %>
+    <label for="f-<%= sport.slug %>"><%= sport.name %></label>
+    <% end %>
     <% end %>
   </div>
 </nav>
