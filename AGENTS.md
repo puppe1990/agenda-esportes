@@ -23,7 +23,7 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 | `lib/sport_slug.rb` | `"Vôlei"` → `volei` |
 | `lib/ge_client.rb` | POST GraphQL `championshipsAgenda` + `multisportQuery` |
 | `lib/ge_parser.rb` | JSON do GE → hashes de `tv_events` |
-| `lib/uol_client.rb` | GET HTML da Central de Jogos (`www.uol.com.br/esporte/futebol/central-de-jogos`) |
+| `lib/uol_client.rb` | GET HTML da Central de Jogos (`www.uol.com.br/esporte/futebol/central-de-jogos/`; segue 301) |
 | `lib/uol_parser.rb` | `#VUELAND_CORE_STATE` / `#VUELAND_STATE` → futebol com `broadcast[]`, `ge_id` `uol:{id}` |
 | `lib/ge_sync.rb` | Janela, GE + UOL, dedup por dia+título, upsert/prune, `stale?`, mutex |
 | `lib/tv_grid.rb` | `on(day)` / `grouped` a partir do store |
@@ -58,7 +58,7 @@ O unit do Cleat usa `ProtectHome=true`, então o Ruby do mise em `/home/ubuntu` 
 - Keep intent/provenance comments. Don't strip them on refactor.
 - Write WHY, not WHAT.
 - GraphQL GE: AgendaItem is a union — query `... on SoccerEvent` / `MatchEventKind` wrapping `match { }`; contestants `... on Team` / `Athlete`. Direct `match` on AgendaItem 422s.
-- UOL SoccerScore JSON lives on `commons.uol.com.br` (no public DNS). The same payload is in the Central de Jogos HTML scripts. Do not GET that host. `String#match?` does not set `$~`; parse `19h30` with `String#match`.
+- UOL SoccerScore JSON lives on `commons.uol.com.br` (no public DNS). The same payload is in the Central de Jogos HTML scripts. Do not GET that host. `String#match?` does not set `$~`; parse `19h30` with `String#match`. The slash-less Central de Jogos path 301s to `/central-de-jogos/`; `UolClient` follows up to 5 hops (`Net::HTTP` does not follow by default).
 - Tilt ERB: `<%== %>` is a SyntaxError. `escape_html: true` encodes CSS quotes; generated `filter_css` uses unquoted `[data-s=#{slug}]`.
 - Cron hits GET `/interno/ge-sync` because Rack authenticity blocks a tokenless POST.
 
