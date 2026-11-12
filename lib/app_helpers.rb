@@ -129,12 +129,16 @@ module AgendaEsportes
       self.class.ge_client || GeClient.new
     end
 
+    def uol_client
+      self.class.uol_client || UolClient.new
+    end
+
     def maybe_lazy_sync
       return if settings.test?
       return unless GeSync.stale?(store)
 
-      Timeout.timeout(8) { GeSync.call(store: store, client: ge_client) }
-    rescue GeSync::FetchError, Timeout::Error, GeClient::Error => error
+      Timeout.timeout(8) { run_tv_sync }
+    rescue GeSync::FetchError, Timeout::Error, GeClient::Error, UolClient::Error => error
       $stderr.puts "ge-sync lazy: #{error.class}: #{error.message}"
     end
 
@@ -148,12 +152,16 @@ module AgendaEsportes
       halt 401 unless bearer_token == expected
 
       content_type :json
-      result = GeSync.call(store: store, client: ge_client)
+      result = run_tv_sync
       state = store.sync_state
       JSON.generate(result.merge(synced_at: state && state[:synced_at]))
     rescue GeSync::FetchError => error
       content_type :json
       halt 502, JSON.generate({ ok: false, error: error.message })
+    end
+
+    def run_tv_sync
+      GeSync.call(store: store, client: ge_client, uol_client: uol_client)
     end
 
     def week_strip_for(day)

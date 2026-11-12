@@ -57,7 +57,8 @@ Hoje o app tem catálogo congelado `futebol | nfl | nba | automobilismo`, pills 
 | Título | `"{first.popularName} x {second.popularName}"`. |
 | Horário | `startDate` + `startHour` como `-03:00`. Sem hora → `timed: false`, clock vira `d mon`. |
 | Identidade | `ge_id` = `String(match.id)`. Sem id → `"#{slug}\|#{start_iso}\|#{title}"`. |
-| Prune | Depois do upsert, apaga `tv_events` fora da janela **ou** cujo `ge_id` não veio nesta rodada. |
+| Prune | Depois do upsert, apaga `tv_events` fora da janela **ou** cujo `ge_id` não veio nesta rodada. Prefixo `uol:` fica de fora quando a Central de Jogos falha (`keep_id_prefixes`). |
+| UOL futebol | GET HTML da Central de Jogos. SoccerScore em `commons.uol.com.br` não resolve na internet pública; o JSON é o `#VUELAND_CORE_STATE` / `#VUELAND_STATE`. Só jogos com `broadcast[]`. Identidade `uol:{id}`. Dedup com o GE por dia + título. Falha do UOL não derruba o job do GE. |
 | Agenda pessoal | Continua `agenda_items`. Match com a grade por `[starts_on, title]`. |
 | Auth do POST | `Authorization: Bearer $GE_SYNC_TOKEN`. Sem token no env → rota 404. |
 | Teste / CI | Lazy sync desligado (`RACK_ENV=test`). Stub HTTP. |
@@ -71,8 +72,9 @@ GitHub Action 09:00 UTC
         ▼
    GeSync.call(now:)
         │ 7 × (championshipsAgenda + multisportQuery)
+        │ 1 × GET Central de Jogos (VUELAND JSON)
         ▼
-   GeClient  →  GeParser  →  tv_events + sync_state
+   GeClient + UolClient  →  parsers  →  tv_events + sync_state
         │
         ▼
    TvGrid.on(day)  →  home / Grade / week-strip
@@ -85,7 +87,9 @@ Unidades (um propósito cada):
 | `lib/sport_slug.rb` | `"Vôlei"` → `volei`; `"Futebol americano"` → `futebol-americano` | nada |
 | `lib/ge_client.rb` | POST JSON em `geql.globo.com/graphql`, timeout 8 s, 1 retry | `Net::HTTP` |
 | `lib/ge_parser.rb` | Resposta GraphQL → array de hashes de evento | `sport_slug` |
-| `lib/ge_sync.rb` | Janela, chama client+parser, upsert/prune, `stale?`, mutex | client, parser, store |
+| `lib/ge_sync.rb` | Janela, GE + UOL, dedup, upsert/prune, `stale?`, mutex | clients, parsers, store |
+| `lib/uol_client.rb` | GET HTML da Central de Jogos, timeout 8 s, 1 retry | `Net::HTTP` |
+| `lib/uol_parser.rb` | Scripts VUELAND → eventos `uol:{id}` com `broadcast[]` | JSON |
 | `AgendaStore` | Tabelas `tv_events` e `sync_state`; queries por dia | SQLite |
 | `TvGrid` | `on(day)`, `in_window(from, to)`, `Event#clock` | store |
 | `SportsCatalog` | `find!` / `in_window` a partir dos slugs vistos | store |

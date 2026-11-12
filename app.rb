@@ -15,6 +15,7 @@ require_relative "lib/week_strip"
 require_relative "lib/tv_grid"
 require_relative "lib/ge_client"
 require_relative "lib/ge_sync"
+require_relative "lib/uol_client"
 require_relative "lib/app_helpers"
 
 module AgendaEsportes
@@ -34,7 +35,7 @@ module AgendaEsportes
     helpers AppHelpers
 
     class << self
-      attr_accessor :ge_client
+      attr_accessor :ge_client, :uol_client
 
       def store=(value)
         @store = value

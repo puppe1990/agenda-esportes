@@ -8,6 +8,7 @@ ENV["DATABASE_PATH"] ||= File.join(Dir.mktmpdir("agenda-esportes-app-"), "agenda
 
 require_relative "../../app"
 require_relative "ge_fakes"
+require_relative "uol_fakes"
 
 class AppTestCase < Minitest::Test
   include Rack::Test::Methods
@@ -21,6 +22,7 @@ class AppTestCase < Minitest::Test
     FileUtils.rm_f(path)
     AgendaEsportes::App.store = AgendaStore.new(path)
     AgendaEsportes::App.ge_client = nil if AgendaEsportes::App.respond_to?(:ge_client=)
+    AgendaEsportes::App.uol_client = EmptyUolClient.new if AgendaEsportes::App.respond_to?(:uol_client=)
   end
 
   def csrf_token

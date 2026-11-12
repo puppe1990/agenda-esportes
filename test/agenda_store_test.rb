@@ -290,6 +290,27 @@ class AgendaStoreTest < Minitest::Test
     assert_equal ["A x B"], titles
   end
 
+  def test_replace_tv_window_keeps_prefixed_ids_out_of_the_prune
+    @store.replace_tv_window(
+      [
+        tv_event(ge_id: "keep-me", title: "GE x Game", starts_at: "2026-11-11T20:00:00-03:00"),
+        tv_event(ge_id: "uol:239649", title: "UOL x Game", starts_at: "2026-11-11T16:30:00-03:00")
+      ],
+      from: Date.new(2026, 11, 11),
+      to: Date.new(2026, 11, 17)
+    )
+    @store.replace_tv_window(
+      [tv_event(ge_id: "keep-me", title: "GE x Game", starts_at: "2026-11-11T20:00:00-03:00")],
+      from: Date.new(2026, 11, 11),
+      to: Date.new(2026, 11, 17),
+      keep_id_prefixes: ["uol:"]
+    )
+
+    ids = @store.tv_events_on(Date.new(2026, 11, 11)).map { |row| row[:ge_id] }
+    assert_includes ids, "keep-me"
+    assert_includes ids, "uol:239649"
+  end
+
   def test_replace_tv_window_prunes_events_outside_the_window
     @store.replace_tv_window(
       [tv_event(ge_id: "old", title: "Old x Game", starts_at: "2026-11-01T20:00:00-03:00")],

@@ -54,4 +54,27 @@ class AppGeSyncHttpTest < AppTestCase
 
     assert last_response.ok?
   end
+
+  def test_ge_sync_merges_uol_broadcast_football
+    home = Faker::Sports::Football.team
+    away = Faker::Sports::Football.team
+    html = UolHtmlFixture.html(
+      matches: UolHtmlFixture.match(id: 42, home_id: 1, away_id: 2, date: Date.today.iso8601, hour: "16h30"),
+      teams: UolHtmlFixture.team(1, home).merge(UolHtmlFixture.team(2, away)),
+      championships: { 42 => { "name" => "Série B", "phase" => "Regular" } }
+    )
+    AgendaEsportes::App.ge_client = EmptyGeClient.new
+    AgendaEsportes::App.uol_client = FixtureUolClient.new(html)
+
+    with_sync_token("segredo-certo") do
+      header "Authorization", "Bearer segredo-certo"
+      get "/interno/ge-sync"
+    end
+
+    payload = JSON.parse(last_response.body)
+    assert_equal 200, last_response.status
+    assert_equal 1, payload["uol"]
+    titles = AgendaEsportes::App.store.tv_events_on(Date.today).map { |row| row[:title] }
+    assert_includes titles, "#{home} x #{away}"
+  end
 end

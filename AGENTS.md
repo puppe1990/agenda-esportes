@@ -5,7 +5,7 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 ## Invariantes
 
 - Seed inicial do catálogo: `futebol`, `nfl`, `nba`, `automobilismo`. **Sem corrida** até o GE mandar o slug. `AgendaStore#find_sport!` recusa slug inédito e inclui o valor recebido + a lista atual na mensagem.
-- Agenda pessoal em SQLite (`agenda_items`). Grade da TV em `tv_events` (GraphQL `geql.globo.com`, janela segunda da semana atual até hoje+6 BRT, todos os esportes do GE). `TvGrid.on(day)` lê o store. Pills e radios `id="f-#{slug}"` / `data-s="#{slug}"` usam o slug inteiro (`futebol`, `basquete`). A home é o sistema: faixa da semana (`.week-strip`), pills de esporte, Lista (cards) e Grade (mês).
+- Agenda pessoal em SQLite (`agenda_items`). Grade da TV em `tv_events` (GraphQL `geql.globo.com` + futebol com `broadcast[]` da Central de Jogos do UOL). Janela: segunda da semana atual até hoje+6 BRT, todos os esportes do GE; UOL só entra jogo de futebol com TV/streaming. `TvGrid.on(day)` lê o store. Pills e radios `id="f-#{slug}"` / `data-s="#{slug}"` usam o slug inteiro (`futebol`, `basquete`). A home é o sistema: faixa da semana (`.week-strip`), pills de esporte, Lista (cards) e Grade (mês).
 - Sync: `rake ge:sync` e `GET/POST /interno/ge-sync` com `Authorization: Bearer $GE_SYNC_TOKEN` (sem token → 404). GitHub Action `.github/workflows/ge-sync.yml` cron `0 9 * * *`. Lazy na `GET /` se o snapshot tem mais de 20 h; desligado em `RACK_ENV=test`.
 - CRUD de `agenda_items`: `GET /agenda`, `GET /agenda/:id`, `GET /agenda/:id/edit`, `POST /agenda`, `PATCH /agenda/:id`, `DELETE /agenda/:id`. Item ausente → 404. Esporte desconhecido → 422.
 - A agendinha usa `.game-card` (um form cada, com `sport` + `title` + `kicks_at` + `note` + `watch` do confronto). Cada card mostra onde assistir (`where`) e um comentário (`note`: campeonato + fase/rodada do GE). Clique grava o jogo no dia selecionado, com horário e comentário. Dia sem grade mostra “Sem jogos na TV neste dia.” — sem `.sport-card` (clique nisso gravava só o nome do esporte). Sem `<select>` e sem botão “Colocar na agenda”. Sem título, o store usa o nome do catálogo. A lista mostra esporte, título, horário, canal e comentário, na ordem do horário.
@@ -23,7 +23,9 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 | `lib/sport_slug.rb` | `"Vôlei"` → `volei` |
 | `lib/ge_client.rb` | POST GraphQL `championshipsAgenda` + `multisportQuery` |
 | `lib/ge_parser.rb` | JSON do GE → hashes de `tv_events` |
-| `lib/ge_sync.rb` | Janela, upsert/prune, `stale?`, mutex |
+| `lib/uol_client.rb` | GET HTML da Central de Jogos (`www.uol.com.br/esporte/futebol/central-de-jogos`) |
+| `lib/uol_parser.rb` | `#VUELAND_CORE_STATE` / `#VUELAND_STATE` → futebol com `broadcast[]`, `ge_id` `uol:{id}` |
+| `lib/ge_sync.rb` | Janela, GE + UOL, dedup por dia+título, upsert/prune, `stale?`, mutex |
 | `lib/tv_grid.rb` | `on(day)` / `grouped` a partir do store |
 | `lib/agenda_store.rb` | SQLite (`agenda_items`, `tv_events`, `sports`, `sync_state`) |
 | `lib/app_helpers.rb` | Helpers Sinatra (dia, CSRF, pills, lazy sync) |
@@ -56,6 +58,7 @@ O unit do Cleat usa `ProtectHome=true`, então o Ruby do mise em `/home/ubuntu` 
 - Keep intent/provenance comments. Don't strip them on refactor.
 - Write WHY, not WHAT.
 - GraphQL GE: AgendaItem is a union — query `... on SoccerEvent` / `MatchEventKind` wrapping `match { }`; contestants `... on Team` / `Athlete`. Direct `match` on AgendaItem 422s.
+- UOL SoccerScore JSON lives on `commons.uol.com.br` (no public DNS). The same payload is in the Central de Jogos HTML scripts. Do not GET that host. `String#match?` does not set `$~`; parse `19h30` with `String#match`.
 - Tilt ERB: `<%== %>` is a SyntaxError. `escape_html: true` encodes CSS quotes; generated `filter_css` uses unquoted `[data-s=#{slug}]`.
 - Cron hits GET `/interno/ge-sync` because Rack authenticity blocks a tokenless POST.
 
@@ -64,13 +67,14 @@ O unit do Cleat usa `ProtectHome=true`, então o Ruby do mise em `/home/ubuntu` 
 - Tests run with a single command: `bundle exec rake test`.
 - `TZ` is set in `test/test_helper.rb` (`America/Sao_Paulo`). Local Ruby: `rvm use ext-ruby-4.0.2` then that command. CI uses 3.3.6.
 - Every new function gets a test. Bug fixes get a regression test.
-- Mock GE I/O with named fake classes (`EmptyGeClient`, `DownGeClient`, `RecordingClient`), not inline stubs.
+- Mock GE/UOL I/O with named fake classes (`EmptyGeClient`, `DownGeClient`, `EmptyUolClient`, `DownUolClient`, `FixtureUolClient`), not inline stubs.
 - Tests must be F.I.R.S.T: fast, independent, repeatable, self-validating, timely.
 
 ## Dependencies
 
-- Inject the GE poster via `GeClient.new(poster:)` and the client via `App.ge_client=` / `GeSync.call(client:)`.
-- Wrap geql behind `GeClient`. Do not call Net::HTTP from `GeSync` or routes.
+- Inject the GE poster via `GeClient.new(poster:)` and the clients via `App.ge_client=` / `App.uol_client=` / `GeSync.call(client:, uol_client:)`.
+- Wrap geql behind `GeClient` and the Central de Jogos HTML behind `UolClient`. Do not call Net::HTTP from `GeSync` or routes.
+- UOL rows use `ge_id` prefix `uol:`. Prune with `keep_id_prefixes: ["uol:"]` when Central de Jogos fails so GE sync does not wipe them. Dedup UOL vs GE by `starts_at` date + downcased title.
 - Config: `DATABASE_PATH`, `SESSION_SECRET`, `GE_SYNC_TOKEN`, `CLEAT_DATA_DIR`, `PORT`. One source of truth in env.
 
 ## Structure
@@ -89,8 +93,8 @@ O unit do Cleat usa `ProtectHome=true`, então o Ruby do mise em `/home/ubuntu` 
 
 ## Defensive programming
 
-- Retries: `GeClient` retries once on timeout/socket/HTTP/JSON errors.
-- Timeouts: geql open/read 8s; lazy home sync 8s.
+- Retries: `GeClient` and `UolClient` retry once on timeout/socket/HTTP/JSON errors.
+- Timeouts: geql and Central de Jogos open/read 8s; lazy home sync 8s.
 - Graceful degradation: lazy GET `/` logs the error and still renders the last snapshot.
 - No circuit breaker, rate limit, or bulkhead.
 
