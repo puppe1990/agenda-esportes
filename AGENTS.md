@@ -34,6 +34,7 @@ Sinatra + SQLite. TDD com Minitest e Faker. Um comando: `bundle exec rake test`.
 | `app.rb` | Rotas Sinatra + `/interno/ge-sync` |
 | `views/` | Layout + agendinha + CRUD (`_cal_event.erb` = chip do mês) |
 | `public/og.html` | Card OG 1200×630 (faixa mint). Rasteriza com `bash scripts/render-og.sh` → `public/og.png` |
+| `public/favicon.svg` | Marca da tab (calendário mint). `bash scripts/render-icons.sh` → `icon-192.png` / `icon-512.png` / `apple-touch-icon.png`. PWA em `public/manifest.webmanifest` |
 | `.github/workflows/ge-sync.yml` | Cron 09:00 UTC |
 | `test/` | Minitest + Faker + rack-test. HTTP em `test/app_*_test.rb`; fakes em `test/support/` |
 

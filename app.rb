@@ -28,6 +28,7 @@ module AgendaEsportes
     set :root, File.expand_path(__dir__)
     set :views, File.join(root, "views")
     set :public_folder, File.join(root, "public")
+    mime_type :webmanifest, "application/manifest+json"
     set :sessions, secret: ENV.fetch("SESSION_SECRET") { "agenda-esportes-dev-secret-change-me-in-production-64-bytes-min!" }
     set :erb, escape_html: true
     use Rack::MethodOverride

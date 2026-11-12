@@ -31,6 +31,8 @@ Card Open Graph: `public/og.html` (dark mint, faixa da semana) rasteriza em `pub
 bash scripts/render-og.sh
 ```
 
+PWA: o calendário mint da tab (`public/favicon.svg`) vira ícone de instalação. `bash scripts/render-icons.sh` gera `icon-192.png`, `icon-512.png` e `apple-touch-icon.png`. Manifest em `/manifest.webmanifest`.
+
 ## Deploy
 
 Cleat runtime `rails` (instala Ruby via mise), app `agenda-esportes`. O systemd esconde `/home`, então o deploy copia o Ruby do mise para `/opt/agenda-esportes/ruby` e o processo sobe com `bash bin/boot`.
