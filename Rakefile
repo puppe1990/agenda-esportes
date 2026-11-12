@@ -12,12 +12,13 @@ end
 task default: :test
 
 namespace :ge do
-  desc "Sync the GE TV grid (today + 6 days) into tv_events"
+  desc "Sync the GE TV grid plus UOL football broadcasts into tv_events"
   task :sync do
     require "json"
     require_relative "lib/agenda_store"
     require_relative "lib/tv_grid"
     require_relative "lib/ge_sync"
+    require_relative "lib/uol_client"
 
     root = __dir__
     path = ENV.fetch("DATABASE_PATH") do
@@ -25,7 +26,7 @@ namespace :ge do
     end
     store = AgendaStore.new(path)
     TvGrid.store = store
-    result = GeSync.call(store: store)
+    result = GeSync.call(store: store, uol_client: UolClient.new)
     state = store.sync_state
     puts JSON.generate(result.merge(synced_at: state && state[:synced_at]))
   end

@@ -1,6 +1,6 @@
 # Agenda de esportes
 
-Faixa da semana (segunda a domingo) com os jogos da TV no dia. Clica no confronto e grava na agenda pessoal (SQLite). Lista é o padrão; Grade mostra o mês. O dia da home é `/?dia=8&mes=11&ano=2026`. CRUD em `/agenda` (filtra pelos mesmos params). A grade vem do GraphQL do ge.globo.com (segunda da semana até hoje + 6 dias, todos os esportes). Dark mint.
+Faixa da semana (segunda a domingo) com os jogos da TV no dia. Clica no confronto e grava na agenda pessoal (SQLite). Lista é o padrão; Grade mostra o mês. O dia da home é `/?dia=8&mes=11&ano=2026`. CRUD em `/agenda` (filtra pelos mesmos params). A grade vem do GraphQL do ge.globo.com (segunda da semana até hoje + 6 dias, todos os esportes) e do futebol na TV da Central de Jogos do UOL (só jogos com `broadcast[]`). Dark mint.
 
 Host: https://agenda-esportes.sites.gestaobem.com  
 Repo: [puppe1990/agenda-esportes](https://github.com/puppe1990/agenda-esportes)

@@ -132,11 +132,15 @@ class AgendaStore
     end
   end
 
-  def replace_tv_window(events, from:, to:, prune_dates: nil)
+  def replace_tv_window(events, from:, to:, prune_dates: nil, keep_id_prefixes: [])
     @db.transaction do
       upsert_tv_events(events)
       delete_tv_outside_window(from, to)
-      prune_tv_on_dates(events, Array(prune_dates || (from..to).to_a))
+      prune_tv_on_dates(
+        events,
+        Array(prune_dates || (from..to).to_a),
+        keep_id_prefixes: Array(keep_id_prefixes)
+      )
     end
   end
 
@@ -240,26 +244,35 @@ class AgendaStore
   end
 
   # Failed GE days stay in prune_dates' complement so a 422/timeout
-  # does not wipe yesterday's rows for that date.
-  def prune_tv_on_dates(events, dates)
+  # does not wipe yesterday's rows for that date. keep_id_prefixes
+  # (uol:) survives a GE-only prune when Central de Jogos is down.
+  def prune_tv_on_dates(events, dates, keep_id_prefixes: [])
     return if dates.empty?
 
     ids = events.map { |event| event[:ge_id].to_s }
     day_keys = dates.map { |day| coerce_date(day).iso8601 }
     date_ph = Array.new(day_keys.size, "?").join(",")
+    keep_sql, keep_args = keep_prefix_clause(keep_id_prefixes)
     if ids.empty?
       @db.execute(
-        "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) IN (#{date_ph})",
-        day_keys
+        "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) IN (#{date_ph})#{keep_sql}",
+        day_keys + keep_args
       )
       return
     end
 
     id_ph = Array.new(ids.size, "?").join(",")
     @db.execute(
-      "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) IN (#{date_ph}) AND ge_id NOT IN (#{id_ph})",
-      day_keys + ids
+      "DELETE FROM tv_events WHERE substr(starts_at, 1, 10) IN (#{date_ph}) AND ge_id NOT IN (#{id_ph})#{keep_sql}",
+      day_keys + ids + keep_args
     )
+  end
+
+  def keep_prefix_clause(prefixes)
+    return ["", []] if prefixes.empty?
+
+    sql = prefixes.map { " AND ge_id NOT LIKE ?" }.join
+    [sql, prefixes.map { |prefix| "#{prefix}%" }]
   end
 
   def ensure_sport(slug, name)
