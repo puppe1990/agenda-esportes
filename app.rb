@@ -15,6 +15,7 @@ require_relative "lib/week_strip"
 require_relative "lib/tv_grid"
 require_relative "lib/ge_client"
 require_relative "lib/ge_sync"
+require_relative "lib/sync_scheduler"
 require_relative "lib/uol_client"
 require_relative "lib/app_helpers"
 

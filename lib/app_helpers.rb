@@ -133,13 +133,15 @@ module AgendaEsportes
       self.class.uol_client || UolClient.new
     end
 
+    # The window fetch used to run inside GET / under an 8s timeout, which
+    # it could never beat (23s live) — so every visit paid 8s and the
+    # snapshot still never refreshed. Hand the work to a thread and render
+    # the stored snapshot instead.
     def maybe_lazy_sync
       return if settings.test?
-      return unless GeSync.stale?(store)
+      return unless GeSync.due?(store)
 
-      Timeout.timeout(8) { run_tv_sync }
-    rescue GeSync::FetchError, Timeout::Error, GeClient::Error, UolClient::Error => error
-      $stderr.puts "ge-sync lazy: #{error.class}: #{error.message}"
+      GeSync.refresh_async(store: store, client: ge_client, uol_client: uol_client)
     end
 
     def bearer_token

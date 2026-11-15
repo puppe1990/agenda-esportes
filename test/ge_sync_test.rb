@@ -20,9 +20,9 @@ class GeSyncTest < Minitest::Test
     client = recording_client
     result = GeSync.call(store: @store, client: client, now: @now)
 
-    dates = (Date.new(2026, 11, 9)..Date.new(2026, 11, 17)).map(&:iso8601)
-    assert_equal dates, client.futebol_dates
-    assert_equal dates, client.multi_dates
+    dates = (Date.new(2026, 11, 9)..Date.new(2026, 11, 17)).to_a
+    assert_equal dates, client.dates
+    assert_equal dates, client.dates
     assert_equal 2, @store.tv_events_on(Date.new(2026, 11, 10)).size
     assert_equal "basquete", @store.tv_events_on(Date.new(2026, 11, 11)).find { |row| row[:sport] == "basquete" }[:sport]
     assert result[:ok]
@@ -36,8 +36,8 @@ class GeSyncTest < Minitest::Test
     client = recording_client
     result = GeSync.call(store: @store, client: client, now: now)
 
-    dates = (Date.new(2026, 11, 9)..Date.new(2026, 11, 15)).map(&:iso8601)
-    assert_equal dates, client.futebol_dates
+    dates = (Date.new(2026, 11, 9)..Date.new(2026, 11, 15)).to_a
+    assert_equal dates, client.dates
     assert_equal "2026-11-09", result[:from]
     assert_equal "2026-11-15", result[:to]
   end
@@ -85,25 +85,96 @@ class GeSyncTest < Minitest::Test
     assert GeSync.stale?(@store, now: @now)
   end
 
-  def test_client_posts_graphql_for_a_date
+  def test_due_is_false_right_after_a_successful_sync
+    @store.record_sync!(synced_at: @now, event_count: 3)
+
+    refute GeSync.due?(@store, now: @now + 60)
+  end
+
+  def test_due_is_true_when_the_snapshot_passed_twenty_hours
+    @store.record_sync!(synced_at: @now - (21 * 3600), event_count: 3)
+
+    assert GeSync.due?(@store, now: @now)
+  end
+
+  def test_due_waits_ten_minutes_before_retrying_a_failure
+    @store.record_sync!(synced_at: @now, event_count: 3, error: "geql down")
+
+    refute GeSync.due?(@store, now: @now + 60)
+    assert GeSync.due?(@store, now: @now + (11 * 60))
+  end
+
+  def test_refresh_async_returns_false_while_a_run_is_in_flight
+    gate = Queue.new
+    client = Object.new
+    client.define_singleton_method(:agenda_range) do |_dates|
+      gate.pop
+      {}
+    end
+
+    assert GeSync.refresh_async(store: @store, client: client, uol_client: nil)
+    refute GeSync.refresh_async(store: @store, client: client, uol_client: nil)
+  ensure
+    gate&.push(:go)
+    sleep 0.05
+    GeSync.reset_running!
+  end
+
+  def test_client_posts_one_document_with_both_roots
     posted = []
     poster = lambda do |query, variables|
       posted << [query, variables]
-      { "data" => { "championshipsAgenda" => [] } }
+      { "data" => {} }
     end
     client = GeClient.new(poster: poster)
-    client.championships_agenda(Date.new(2026, 11, 11))
-    client.multisport_agenda(Date.new(2026, 11, 11))
+    client.agenda_range([Date.new(2026, 11, 11)])
 
-    assert_equal 2, posted.size
-    assert_includes posted[0][0], "championshipsAgenda"
-    assert_includes posted[0][0], "... on SoccerEvent"
-    assert_includes posted[0][0], "... on MatchEventKind"
-    assert_includes posted[0][0], "... on Team"
-    assert_includes posted[0][0], "... on Athlete"
-    assert_equal({ date: "2026-11-11" }, posted[0][1])
-    assert_includes posted[1][0], "multisportTabAgenda"
-    assert_includes posted[1][0], "... on SoccerEvent"
+    assert_equal 1, posted.size
+    query = posted[0][0]
+    assert_includes query, "championshipsAgenda"
+    assert_includes query, "multisportTabAgenda"
+    assert_includes query, "... on SoccerEvent"
+    assert_includes query, "... on MatchEventKind"
+    assert_includes query, "... on Team"
+    assert_includes query, "... on Athlete"
+    assert_equal({}, posted[0][1])
+  end
+
+  # Regression: geql answers a POST from a PUBLIC-scoped HTTP cache. While
+  # the two roots were separate documents they collided and one root came
+  # back holding the other's rows, dropping half the window in silence.
+  def test_one_document_per_window_prevents_cross_root_cache_collisions
+    queries = []
+    poster = lambda do |query, _variables|
+      queries << query
+      {
+        "data" => {
+          "c0" => [{ "championship" => { "name" => "Liga" }, "now" => [], "past" => [], "future" => [] }],
+          "m0" => [{ "sport" => { "name" => "Basquete" }, "championshipsAgenda" => [] }]
+        }
+      }
+    end
+    slices = GeClient.new(poster: poster).agenda_range([Date.new(2026, 11, 11)])
+
+    assert_equal 1, queries.size
+    assert_equal 1, slices[Date.new(2026, 11, 11)].dig("championshipsAgenda", "data", "championshipsAgenda").size
+    assert_equal 1, slices[Date.new(2026, 11, 11)].dig("multisportTabAgenda", "data", "multisportTabAgenda").size
+  end
+
+  def test_window_is_fetched_in_a_single_request
+    client = recording_client
+    GeSync.call(store: @store, client: client, now: @now)
+
+    assert_equal 1, client.calls
+    assert_equal (Date.new(2026, 11, 9)..Date.new(2026, 11, 17)).to_a, client.dates
+  end
+
+  def test_a_blank_day_in_the_batch_keeps_its_rows
+    seed_day11("old-11")
+    client = recording_client(blank_dates: ["2026-11-11"])
+    GeSync.call(store: @store, client: client, now: @now)
+
+    assert_equal ["old-11"], @store.tv_events_on(Date.new(2026, 11, 11)).map { |row| row[:ge_id] }
   end
 
   private
@@ -125,54 +196,55 @@ class GeSyncTest < Minitest::Test
     @store.replace_tv_window(events, from: Date.new(2026, 11, 11), to: Date.new(2026, 11, 17))
   end
 
-  def recording_client(ids: {}, fail_dates: [])
-    RecordingClient.new(ids: ids, fail_dates: fail_dates)
+  def recording_client(ids: {}, fail_dates: [], blank_dates: [])
+    RecordingClient.new(ids: ids, fail_dates: fail_dates, blank_dates: blank_dates)
   end
 
   class RecordingClient
-    attr_reader :futebol_dates, :multi_dates
+    attr_reader :dates, :calls
 
-    def initialize(ids:, fail_dates:)
+    def initialize(ids:, fail_dates:, blank_dates: [])
       @ids = ids
       @fail_dates = fail_dates
-      @futebol_dates = []
-      @multi_dates = []
+      @blank_dates = Array(blank_dates)
+      @dates = []
+      @calls = 0
     end
 
-    def championships_agenda(date)
-      iso = date.iso8601
-      @futebol_dates << iso
-      raise GeClient::Error, "geql down" if fail?(iso)
+    def agenda_range(dates)
+      @calls += 1
+      raise GeClient::Error, "geql down" if @fail_dates == :all
 
-      id = @ids[iso]&.first || "futebol-#{iso}"
-      {
-        "data" => {
-          "championshipsAgenda" => [agenda_row("Liga", id, iso, "20:00:00", "A", "B")]
-        }
-      }
-    end
-
-    def multisport_agenda(date)
-      iso = date.iso8601
-      @multi_dates << iso
-      raise GeClient::Error, "geql down" if fail?(iso)
-
-      {
-        "data" => {
-          "multisportTabAgenda" => [
-            {
-              "sport" => { "name" => "Basquete" },
-              "championshipsAgenda" => [agenda_row("NBA", "358001-#{iso}", iso, "22:00:00", "C", "D")]
-            }
-          ]
-        }
-      }
+      @dates.concat(dates)
+      dates.to_h { |date| [date, slice(date)] }
     end
 
     private
 
+    def slice(date)
+      iso = date.iso8601
+      return nil if @blank_dates.include?(iso) || fail?(iso)
+
+      id = @ids[iso]&.first || "futebol-#{iso}"
+      {
+        "championshipsAgenda" => {
+          "data" => { "championshipsAgenda" => [agenda_row("Liga", id, iso, "20:00:00", "A", "B")] }
+        },
+        "multisportTabAgenda" => {
+          "data" => {
+            "multisportTabAgenda" => [
+              {
+                "sport" => { "name" => "Basquete" },
+                "championshipsAgenda" => [agenda_row("NBA", "358001-#{iso}", iso, "22:00:00", "C", "D")]
+              }
+            ]
+          }
+        }
+      }
+    end
+
     def fail?(iso)
-      @fail_dates == :all || Array(@fail_dates).include?(iso)
+      Array(@fail_dates).include?(iso)
     end
 
     def agenda_row(champ, id, iso, hour, first, second)

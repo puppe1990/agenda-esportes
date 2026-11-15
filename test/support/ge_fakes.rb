@@ -1,21 +1,16 @@
 # frozen_string_literal: true
 
 class EmptyGeClient
-  def championships_agenda(_date)
-    { "data" => { "championshipsAgenda" => [] } }
-  end
-
-  def multisport_agenda(_date)
-    { "data" => { "multisportTabAgenda" => [] } }
+  def agenda_range(dates)
+    dates.to_h do |date|
+      [date, { "championshipsAgenda" => { "data" => { "championshipsAgenda" => [] } },
+               "multisportTabAgenda" => { "data" => { "multisportTabAgenda" => [] } } }]
+    end
   end
 end
 
 class DownGeClient
-  def championships_agenda(_date)
-    raise GeClient::Error, "geql down"
-  end
-
-  def multisport_agenda(_date)
+  def agenda_range(_dates)
     raise GeClient::Error, "geql down"
   end
 end

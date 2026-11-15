@@ -36,28 +36,17 @@ class GeClient
     ... on MatchEventKind { #{MATCH_INNER} }
   GRAPHQL
 
-  CHAMPIONSHIPS_QUERY = <<~GRAPHQL.freeze
-    query ($date: Date!) {
-      championshipsAgenda(filter: { date: $date }) {
-        championship { name url }
-        now: items(filter: { moment: NOW }) { #{MATCH_FIELDS} }
-        past: items(filter: { moment: PAST }) { #{MATCH_FIELDS} }
-        future: items(filter: { moment: FUTURE }) { #{MATCH_FIELDS} }
-      }
-    }
+  CHAMPIONSHIPS_FIELDS = <<~GRAPHQL.freeze
+    championship { name url }
+    now: items(filter: { moment: NOW }) { #{MATCH_FIELDS} }
+    past: items(filter: { moment: PAST }) { #{MATCH_FIELDS} }
+    future: items(filter: { moment: FUTURE }) { #{MATCH_FIELDS} }
   GRAPHQL
 
-  MULTISPORT_QUERY = <<~GRAPHQL.freeze
-    query multisportQuery($date: Date!) {
-      multisportTabAgenda(filter: { date: $date }) {
-        sport { name code }
-        championshipsAgenda {
-          championship { name url }
-          now: items(filter: { moment: NOW }) { #{MATCH_FIELDS} }
-          past: items(filter: { moment: PAST }) { #{MATCH_FIELDS} }
-          future: items(filter: { moment: FUTURE }) { #{MATCH_FIELDS} }
-        }
-      }
+  MULTISPORT_FIELDS = <<~GRAPHQL.freeze
+    sport { name code }
+    championshipsAgenda {
+      #{CHAMPIONSHIPS_FIELDS}
     }
   GRAPHQL
 
@@ -65,12 +54,35 @@ class GeClient
     @poster = poster || method(:default_post)
   end
 
-  def championships_agenda(date)
-    post(CHAMPIONSHIPS_QUERY, { date: date.iso8601 })
-  end
+  # One handshake per day cost ~0.66s from fsn1 to Globo (fresh TCP+TLS
+  # every request), so the 13-day window took 23s. Aliasing every day of
+  # both roots into ONE document keeps the window at a single round trip.
+  #
+  # Both roots must share that document: geql answers a POST from a
+  # PUBLIC-scoped HTTP cache (see extensions.cacheControl) and two
+  # documents covering the same dates came back as the same payload —
+  # multisportTabAgenda aliases were served championshipsAgenda rows, so
+  # half the window silently vanished. One document has one response and
+  # no cross-document cache to collide with.
+  def agenda_range(dates)
+    return {} if dates.empty?
 
-  def multisport_agenda(date)
-    post(MULTISPORT_QUERY, { date: date.iso8601 })
+    document = dates.each_with_index.map do |date, index|
+      [
+        "c#{index}: championshipsAgenda(filter: { date: \"#{date.iso8601}\" }) { #{CHAMPIONSHIPS_FIELDS} }",
+        "m#{index}: multisportTabAgenda(filter: { date: \"#{date.iso8601}\" }) { #{MULTISPORT_FIELDS} }"
+      ].join("\n")
+    end
+    data = post("query { #{document.join("\n")} }", {})["data"] || {}
+    dates.each_with_index.to_h do |date, index|
+      [
+        date,
+        {
+          "championshipsAgenda" => { "data" => { "championshipsAgenda" => data["c#{index}"] } },
+          "multisportTabAgenda" => { "data" => { "multisportTabAgenda" => data["m#{index}"] } }
+        }
+      ]
+    end
   end
 
   private

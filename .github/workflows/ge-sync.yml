@@ -1,5 +1,9 @@
 name: ge-sync
 
+# The app schedules its own sync every 15 minutes (lib/sync_scheduler.rb)
+# because GitHub's schedule fires 6-8h late on this repo. This workflow is
+# kept as a second source: it warms a cold app and reports drift. It is
+# not the only thing keeping the snapshot fresh anymore.
 on:
   schedule:
     - cron: "0 9 * * *"

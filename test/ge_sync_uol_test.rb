@@ -119,8 +119,21 @@ class GeSyncUolTest < Minitest::Test
   end
 
   class SameMatchupGeClient
-    def championships_agenda(date)
+    def agenda_range(dates)
+      dates.to_h { |date| [date, slice(date)] }
+    end
+
+    private
+
+    def slice(date)
       iso = date.iso8601
+      {
+        "championshipsAgenda" => futebol_agenda(iso),
+        "multisportTabAgenda" => { "data" => { "multisportTabAgenda" => [] } }
+      }
+    end
+
+    def futebol_agenda(iso)
       return empty_futebol unless iso == "2026-11-11"
 
       {
@@ -148,10 +161,6 @@ class GeSyncUolTest < Minitest::Test
           ]
         }
       }
-    end
-
-    def multisport_agenda(_date)
-      { "data" => { "multisportTabAgenda" => [] } }
     end
 
     def empty_futebol
